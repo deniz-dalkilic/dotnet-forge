@@ -1,5 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk.Worker">
   <ItemGroup>
+    <ProjectReference Include="../Application/Template.Application.csproj" />
     <ProjectReference Include="../Infrastructure/Template.Infrastructure.csproj" />
   </ItemGroup>
   <ItemGroup>

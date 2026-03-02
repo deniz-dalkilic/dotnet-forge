@@ -10,6 +10,7 @@
     <PackageReference Include="FluentAssertions" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="../../src/Domain/Template.Domain.csproj" />
     <ProjectReference Include="../../src/Application/Template.Application.csproj" />
   </ItemGroup>
 </Project>
