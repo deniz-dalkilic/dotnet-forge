@@ -5,6 +5,7 @@ using OpenTelemetry.Trace;
 using Serilog;
 using Template.Api.Endpoints;
 using Template.Application.UseCases.AppInfo;
+using Template.Infrastructure.Data;
 using Template.Infrastructure.DependencyInjection;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -24,7 +25,8 @@ builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddScoped<GetAppInfoService>();
 
 builder.Services.AddProblemDetails();
-builder.Services.AddHealthChecks();
+builder.Services.AddHealthChecks()
+    .AddDbContextCheck<AppDbContext>(name: "postgres");
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
