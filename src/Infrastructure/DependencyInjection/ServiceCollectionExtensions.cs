@@ -2,7 +2,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Quartz;
-using StackExchange.Redis;
 using Template.Application.Abstractions;
 using Template.Infrastructure.Auth;
 using Template.Infrastructure.Caching;
@@ -21,9 +20,11 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IAppDbContext>(sp => sp.GetRequiredService<AppDbContext>());
         services.AddScoped<IUnitOfWork, UnitOfWork>();
 
-        services.Configure<RedisCacheOptions>(configuration.GetSection(RedisCacheOptions.SectionName));
-        services.AddSingleton<IConnectionMultiplexer>(_ =>
-            ConnectionMultiplexer.Connect(configuration.GetSection(RedisCacheOptions.SectionName)["Configuration"] ?? "localhost:6379"));
+        services.AddStackExchangeRedisCache(options =>
+        {
+            options.Configuration = configuration.GetConnectionString("Redis") ?? "localhost:6379";
+        });
+        services.AddSingleton<ICache, DistributedCacheService>();
 
         services.Configure<RabbitMqOptions>(configuration.GetSection(RabbitMqOptions.SectionName));
 
