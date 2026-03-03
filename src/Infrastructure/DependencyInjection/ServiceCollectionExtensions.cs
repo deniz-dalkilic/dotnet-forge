@@ -27,6 +27,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<ICache, DistributedCacheService>();
 
         services.Configure<RabbitMqOptions>(configuration.GetSection(RabbitMqOptions.SectionName));
+        services.AddSingleton<IEventBus, RabbitMqEventBus>();
 
         services.Configure<KeycloakClientCredentialsOptions>(configuration.GetSection(KeycloakClientCredentialsOptions.SectionName));
         services.AddSingleton(sp =>

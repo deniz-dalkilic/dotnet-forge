@@ -3,6 +3,7 @@ using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using Serilog;
 using Template.Infrastructure.DependencyInjection;
+using Template.Worker.Messaging;
 
 var builder = Host.CreateApplicationBuilder(args);
 
@@ -15,6 +16,7 @@ builder.Services.AddOpenTelemetry()
         .AddOtlpExporter());
 
 builder.Services.AddQuartzHostedService(options => options.WaitForJobsToComplete = true);
+builder.Services.AddHostedService<SampleItemCreatedConsumerService>();
 
 builder.Services.AddSerilog(config => config.WriteTo.Console());
 

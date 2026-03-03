@@ -2,6 +2,6 @@ namespace Template.Application.Abstractions;
 
 public interface IEventBus
 {
-    Task PublishAsync<TEvent>(TEvent @event, CancellationToken cancellationToken = default)
-        where TEvent : class;
+    Task PublishAsync<T>(T evt, CancellationToken ct = default)
+        where T : class;
 }

@@ -72,6 +72,7 @@ if (app.Environment.IsDevelopment())
 
 app.MapHealthEndpoints();
 app.MapAppInfoEndpoints();
+app.MapSampleItemEndpoints();
 app.MapGet("/secure", () => Results.Ok("Protected endpoint")).RequireAuthorization();
 
 app.Run();
