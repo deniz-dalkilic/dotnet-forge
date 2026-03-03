@@ -1,7 +1,9 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using System.Text;
 using Template.Application.Abstractions;
+using Template.Application.Auth;
 using Template.Infrastructure.Auth;
 using Template.Infrastructure.Caching;
 using Template.Infrastructure.Data;
@@ -20,6 +22,26 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IUnitOfWork, UnitOfWork>();
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IExternalIdentityRepository, ExternalIdentityRepository>();
+
+        services.AddOptions<ExternalAuthOptions>()
+            .Bind(configuration.GetSection(ExternalAuthOptions.SectionName))
+            .ValidateDataAnnotations()
+            .Validate(options =>
+                !string.IsNullOrWhiteSpace(options.Providers.Google.ClientId) &&
+                !string.IsNullOrWhiteSpace(options.Providers.Microsoft.ClientId) &&
+                !string.IsNullOrWhiteSpace(options.Providers.Apple.ClientId),
+                "ExternalAuth provider client ids are required.")
+            .ValidateOnStart();
+        services.AddSingleton<IExternalIdTokenValidator, OidcExternalIdTokenValidator>();
+        services.AddScoped<ExternalSignInService>();
+
+        services.AddOptions<JwtOptions>()
+            .Bind(configuration.GetSection(JwtOptions.SectionName))
+            .ValidateDataAnnotations()
+            .Validate(options => Encoding.UTF8.GetByteCount(options.SigningKey) >= 32,
+                "Jwt:SigningKey must be at least 32 bytes.")
+            .ValidateOnStart();
+        services.AddSingleton<IJwtTokenIssuer, JwtTokenIssuer>();
 
         services.AddStackExchangeRedisCache(options =>
         {
