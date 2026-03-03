@@ -6,6 +6,7 @@ using Template.Infrastructure.Auth;
 using Template.Infrastructure.Caching;
 using Template.Infrastructure.Data;
 using Template.Infrastructure.Messaging;
+using Template.Infrastructure.Data.Repositories;
 
 namespace Template.Infrastructure.DependencyInjection;
 
@@ -17,6 +18,8 @@ public static class ServiceCollectionExtensions
             options.UseNpgsql(configuration.GetConnectionString("Postgres")));
         services.AddScoped<IAppDbContext>(sp => sp.GetRequiredService<AppDbContext>());
         services.AddScoped<IUnitOfWork, UnitOfWork>();
+        services.AddScoped<IUserRepository, UserRepository>();
+        services.AddScoped<IExternalIdentityRepository, ExternalIdentityRepository>();
 
         services.AddStackExchangeRedisCache(options =>
         {
