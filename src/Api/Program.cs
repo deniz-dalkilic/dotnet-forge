@@ -16,6 +16,7 @@ using Template.Api.Middleware;
 using Template.Api.Observability;
 using Template.Application.UseCases.AppInfo;
 using Template.Infrastructure.Auth;
+using Template.Infrastructure.Configuration;
 using Template.Infrastructure.Data;
 using Template.Infrastructure.DependencyInjection;
 using Template.Infrastructure.Messaging;
@@ -25,6 +26,8 @@ Log.Logger = new LoggerConfiguration()
     .Enrich.FromLogContext()
     .WriteTo.Console(outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] ({CorrelationId}) [{TraceId}/{SpanId}] {Message:lj}{NewLine}{Exception}")
     .CreateBootstrapLogger();
+
+DotEnvLoader.LoadFromContentRoot(Directory.GetCurrentDirectory());
 
 var builder = WebApplication.CreateBuilder(args);
 

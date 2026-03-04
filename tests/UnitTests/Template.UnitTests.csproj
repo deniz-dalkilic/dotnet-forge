@@ -13,5 +13,6 @@
   <ItemGroup>
     <ProjectReference Include="../../src/Domain/Template.Domain.csproj" />
     <ProjectReference Include="../../src/Application/Template.Application.csproj" />
+    <ProjectReference Include="../../src/Infrastructure/Template.Infrastructure.csproj" />
   </ItemGroup>
 </Project>

@@ -30,3 +30,7 @@ TestResults/
 .DS_Store
 Thumbs.db
 infra/.env
+
+# Local secrets
+.env
+.env.local

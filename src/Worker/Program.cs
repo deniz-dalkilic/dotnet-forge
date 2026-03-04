@@ -5,6 +5,7 @@ using OpenTelemetry.Trace;
 using Quartz;
 using Serilog;
 using Serilog.Sinks.Grafana.Loki;
+using Template.Infrastructure.Configuration;
 using Template.Infrastructure.DependencyInjection;
 using Template.Infrastructure.Jobs;
 using Template.Infrastructure.Messaging;
@@ -16,6 +17,8 @@ Log.Logger = new LoggerConfiguration()
     .Enrich.FromLogContext()
     .WriteTo.Console()
     .CreateBootstrapLogger();
+
+DotEnvLoader.LoadFromContentRoot(Directory.GetCurrentDirectory());
 
 var builder = Host.CreateApplicationBuilder(args);
 

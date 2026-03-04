@@ -70,4 +70,16 @@ Before running the API with external login enabled, configure these environment 
 - `Jwt__Audience`
 - `Jwt__SigningKey`
 
-You can place these in your local environment, `appsettings.Development.json`, or Docker env file depending on your workflow.
+For local development, copy the project template and fill your own values:
+
+```bash
+cp .env.example .env
+```
+
+`src/Api` and `src/Worker` load `.env` and `.env.local` from the repository root on startup (without overriding already-defined environment variables), so real deployment environments can continue to use platform-managed secrets.
+
+External login flow endpoint:
+
+- `POST /api/auth/external/google` with body `{ "idToken": "<google-id-token>", "nonce": "<optional-nonce>" }`
+
+On success, the API validates the external `id_token` and returns an internal access token (plus refresh token if enabled).
