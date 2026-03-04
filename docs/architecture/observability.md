@@ -51,6 +51,31 @@ This template is **OSS-first** for observability and uses OpenTelemetry + Grafan
 }
 ```
 
+## Request correlation and logging (API)
+
+The API adds a correlation middleware and structured request logging:
+
+- Incoming header `X-Correlation-ID` is reused when present; otherwise a new GUID is generated.
+- The effective correlation ID is returned in the response header `X-Correlation-ID`.
+- Correlation ID is pushed into both `ILogger` scopes and Serilog `LogContext`, so logs from downstream services/classes automatically include it.
+- `UseSerilogRequestLogging` enriches each request event with:
+  - `CorrelationId`
+  - `TraceId` / `SpanId` (from `Activity.Current`)
+  - `UserId` (`sub` claim when authenticated)
+  - `RequestPath`, `Method`, `StatusCode`, `ElapsedMs`
+
+This avoids manually adding logging boilerplate in each class while preserving per-request context.
+
+## Correlating logs (Loki) with traces (Tempo)
+
+When OpenTelemetry tracing is enabled and logs are shipped to Loki:
+
+- The same trace context (`TraceId` / `SpanId`) appears in request and application logs.
+- You can search Loki by `CorrelationId` for a full request log trail.
+- You can search Loki by `TraceId`, then open the matching trace in Tempo using that trace ID.
+
+This enables fast pivoting between logs and distributed traces during investigation.
+
 ## OTLP and Collector
 
 Both API and Worker export OTLP directly using `OpenTelemetry:OtlpEndpoint`. In local development, this typically points to the OpenTelemetry Collector (`http://localhost:4317`).

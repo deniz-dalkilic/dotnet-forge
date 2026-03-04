@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Reflection;
 using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -10,6 +11,7 @@ using OpenTelemetry.Trace;
 using Serilog;
 using Serilog.Sinks.Grafana.Loki;
 using Template.Api.Endpoints;
+using Template.Api.Middleware;
 using Template.Api.Observability;
 using Template.Application.UseCases.AppInfo;
 using Template.Infrastructure.Auth;
@@ -20,7 +22,7 @@ using Template.Infrastructure.Messaging;
 Log.Logger = new LoggerConfiguration()
     .MinimumLevel.Information()
     .Enrich.FromLogContext()
-    .WriteTo.Console()
+    .WriteTo.Console(outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] ({CorrelationId}) [{TraceId}/{SpanId}] {Message:lj}{NewLine}{Exception}")
     .CreateBootstrapLogger();
 
 var builder = WebApplication.CreateBuilder(args);
@@ -34,7 +36,7 @@ builder.Host.UseSerilog((context, services, configuration) =>
         .Enrich.WithEnvironmentName()
         .Enrich.WithThreadId()
         .Enrich.With(new TraceContextEnricher())
-        .WriteTo.Console();
+        .WriteTo.Console(outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] ({CorrelationId}) [{TraceId}/{SpanId}] {Message:lj}{NewLine}{Exception}");
 
     var lokiEndpoint = context.Configuration["Serilog:Loki:Endpoint"];
     if (!string.IsNullOrWhiteSpace(lokiEndpoint))
@@ -115,9 +117,39 @@ builder.Services.AddOpenTelemetry()
 
 var app = builder.Build();
 
+app.UseMiddleware<CorrelationIdMiddleware>();
 app.UseExceptionHandler();
 app.UseStatusCodePages();
-app.UseSerilogRequestLogging();
+app.UseRouting();
+app.UseSerilogRequestLogging(options =>
+{
+    options.EnrichDiagnosticContext = (diagnosticContext, httpContext) =>
+    {
+        var correlationId = httpContext.Items[CorrelationIdMiddleware.ItemKey]?.ToString()
+            ?? httpContext.TraceIdentifier;
+        var userId = httpContext.User.Identity?.IsAuthenticated == true
+            ? httpContext.User.FindFirst("sub")?.Value
+            : null;
+
+        diagnosticContext.Set("CorrelationId", correlationId);
+
+        var activity = Activity.Current;
+        if (activity is not null)
+        {
+            diagnosticContext.Set("TraceId", activity.TraceId.ToHexString());
+            diagnosticContext.Set("SpanId", activity.SpanId.ToHexString());
+            diagnosticContext.Set("ElapsedMs", activity.Duration.TotalMilliseconds);
+        }
+
+        if (!string.IsNullOrWhiteSpace(userId))
+        {
+            diagnosticContext.Set("UserId", userId);
+        }
+        diagnosticContext.Set("RequestPath", httpContext.Request.Path);
+        diagnosticContext.Set("Method", httpContext.Request.Method);
+        diagnosticContext.Set("StatusCode", httpContext.Response.StatusCode);
+    };
+});
 app.UseAuthentication();
 app.UseAuthorization();
 
