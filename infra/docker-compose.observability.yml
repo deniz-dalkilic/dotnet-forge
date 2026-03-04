@@ -9,28 +9,9 @@ services:
       - "${OTEL_GRPC_PORT:-4317}:4317"
       - "${OTEL_HTTP_PORT:-4318}:4318"
     volumes:
-      - ./observability/otel-collector/config.yaml:/etc/otelcol-contrib/config.yaml:ro
+      - ./otel-collector-config.yml:/etc/otelcol-contrib/config.yaml:ro
     healthcheck:
-      test: ["CMD-SHELL", "wget --spider -q http://127.0.0.1:13133/ || exit 1"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
-    networks:
-      - template-net
-
-  prometheus:
-    image: prom/prometheus:v3.0.0
-    container_name: template-prometheus
-    command:
-      - --config.file=/etc/prometheus/prometheus.yml
-      - --web.enable-lifecycle
-    ports:
-      - "${PROMETHEUS_PORT:-9090}:9090"
-    volumes:
-      - ./observability/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
-      - template_prometheus_data:/prometheus
-    healthcheck:
-      test: ["CMD-SHELL", "wget --spider -q http://127.0.0.1:9090/-/healthy || exit 1"]
+      test: ["CMD", "/otelcol-contrib", "--version"]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -70,16 +51,24 @@ services:
     networks:
       - template-net
 
-  promtail:
-    image: grafana/promtail:3.1.1
-    container_name: template-promtail
-    command: -config.file=/etc/promtail/config.yml
+  prometheus:
+    image: prom/prometheus:v3.0.0
+    container_name: template-prometheus
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --web.enable-lifecycle
+    ports:
+      - "${PROMETHEUS_PORT:-9090}:9090"
     volumes:
-      - ./observability/promtail/config.yml:/etc/promtail/config.yml:ro
-      - /var/lib/docker/containers:/var/lib/docker/containers:ro
-      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - template_prometheus_data:/prometheus
+    healthcheck:
+      test: ["CMD-SHELL", "wget --spider -q http://127.0.0.1:9090/-/healthy || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
     depends_on:
-      loki:
+      otel-collector:
         condition: service_healthy
     networks:
       - template-net
@@ -94,7 +83,7 @@ services:
     ports:
       - "${GRAFANA_PORT:-3000}:3000"
     volumes:
-      - ./observability/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
       - template_grafana_data:/var/lib/grafana
     healthcheck:
       test: ["CMD-SHELL", "wget --spider -q http://127.0.0.1:3000/api/health || exit 1"]
@@ -107,6 +96,21 @@ services:
       loki:
         condition: service_healthy
       tempo:
+        condition: service_healthy
+    networks:
+      - template-net
+
+  promtail:
+    image: grafana/promtail:3.1.1
+    container_name: template-promtail
+    profiles: ["with-promtail"]
+    command: -config.file=/etc/promtail/config.yml
+    volumes:
+      - ./observability/promtail/config.yml:/etc/promtail/config.yml:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    depends_on:
+      loki:
         condition: service_healthy
     networks:
       - template-net

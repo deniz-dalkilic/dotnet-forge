@@ -45,7 +45,14 @@ docker compose --env-file infra/.env -f infra/docker-compose.core.yml up -d
 3. Optionally add observability stack:
 
 ```bash
-docker compose --env-file infra/.env -f infra/docker-compose.core.yml -f infra/docker-compose.observability.yml up -d
+docker compose -f infra/docker-compose.core.yml -f infra/docker-compose.observability.yml up -d
+```
+
+4. For API/Worker containers, point telemetry and logs to the observability stack:
+
+```bash
+OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+LOKI_URL=http://loki:3100
 ```
 
 ## Authentication approach
