@@ -43,6 +43,13 @@ public static class ServiceCollectionExtensions
             .ValidateOnStart();
         services.AddSingleton<IJwtTokenIssuer, JwtTokenIssuer>();
 
+        services.AddOptions<RefreshTokenOptions>()
+            .Bind(configuration.GetSection(RefreshTokenOptions.SectionName))
+            .Validate(options => options.LifetimeDays > 0, "RefreshTokens:LifetimeDays must be greater than zero.")
+            .ValidateOnStart();
+        services.AddSingleton<IClock, SystemClock>();
+        services.AddScoped<IRefreshTokenService, RefreshTokenService>();
+
         services.AddStackExchangeRedisCache(options =>
         {
             options.Configuration = configuration.GetConnectionString("Redis") ?? "localhost:6379";

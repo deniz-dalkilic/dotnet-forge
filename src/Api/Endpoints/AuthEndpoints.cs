@@ -2,6 +2,7 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Template.Application.Abstractions;
 using Template.Application.Auth;
@@ -45,6 +46,8 @@ public static class AuthEndpoints
                 return Results.Ok(new ExternalSignInResponse(
                     accessToken,
                     (int)lifetime.TotalSeconds,
+                    signInResult.RefreshToken?.Token,
+                    signInResult.RefreshToken?.ExpiresAtUtc,
                     new UserResponse(signInResult.User.Id, signInResult.User.Email, signInResult.User.DisplayName),
                     signInResult.Roles));
             }
@@ -76,16 +79,65 @@ public static class AuthEndpoints
         .WithTags("Auth")
         .WithSummary("Returns current user claim summary.");
 
+        var refreshTokenOptions = endpoints.ServiceProvider.GetRequiredService<IOptions<RefreshTokenOptions>>();
+        if (refreshTokenOptions.Value.Enabled)
+        {
+            endpoints.MapPost("/api/auth/refresh", async (
+                RefreshRequest request,
+                IRefreshTokenService refreshTokenService,
+                IUserRepository userRepository,
+                IJwtTokenIssuer tokenIssuer,
+                IOptions<JwtOptions> jwtOptions,
+                CancellationToken cancellationToken) =>
+            {
+                var rotated = await refreshTokenService.RotateAsync(request.RefreshToken, cancellationToken);
+                if (rotated is null)
+                {
+                    return Results.Unauthorized();
+                }
+
+                var user = await userRepository.GetByIdAsync(rotated.UserId, cancellationToken);
+                if (user is null)
+                {
+                    return Results.Unauthorized();
+                }
+
+                var lifetime = TimeSpan.FromMinutes(jwtOptions.Value.LifetimeMinutes);
+                var accessToken = tokenIssuer.IssueAccessToken(user, [ExternalSignInService.DefaultRole], lifetime);
+
+                return Results.Ok(new RefreshResponse(accessToken, (int)lifetime.TotalSeconds, rotated.Token, rotated.ExpiresAtUtc));
+            })
+            .WithTags("Auth")
+            .WithSummary("Rotates a refresh token and issues a new access token.");
+
+            endpoints.MapPost("/api/auth/logout", async (
+                LogoutRequest request,
+                IRefreshTokenService refreshTokenService,
+                CancellationToken cancellationToken) =>
+            {
+                await refreshTokenService.RevokeAsync(request.RefreshToken, cancellationToken);
+                return Results.NoContent();
+            })
+            .WithTags("Auth")
+            .WithSummary("Revokes a refresh token.");
+        }
+
         return endpoints;
     }
 
     public sealed record ExternalSignInRequest(string IdToken, string? Nonce);
+    public sealed record RefreshRequest(string RefreshToken);
+    public sealed record LogoutRequest(string RefreshToken);
 
     public sealed record ExternalSignInResponse(
         string AccessToken,
         int ExpiresIn,
+        string? RefreshToken,
+        DateTimeOffset? RefreshTokenExpiresAtUtc,
         UserResponse User,
         IReadOnlyList<string> Roles);
+
+    public sealed record RefreshResponse(string AccessToken, int ExpiresIn, string RefreshToken, DateTimeOffset RefreshTokenExpiresAtUtc);
 
     public sealed record UserResponse(Guid Id, string? Email, string DisplayName);
 

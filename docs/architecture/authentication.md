@@ -23,3 +23,11 @@ When using Google, Microsoft, or Apple sign-in, the backend validates the provid
 - `email` should only be treated as trusted for account-linking or privileged flows when `email_verified == true`.
 
 This keeps trust decisions server-side and prevents clients from bypassing validation by sending unverified profile data.
+
+## Optional Refresh Tokens
+
+Refresh token support is optional and controlled by configuration (`RefreshTokens:Enabled`).
+
+- Refresh tokens are stored hashed (SHA-256), rotated on use, and can be revoked on logout.
+- This is suitable for a monolith or small system where auth remains in-process.
+- For microservices, consider a dedicated auth service/token service boundary instead of sharing refresh token concerns across services.

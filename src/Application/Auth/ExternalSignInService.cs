@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Options;
 using Template.Application.Abstractions;
 using Template.Domain.Entities;
 
@@ -7,6 +8,8 @@ public sealed class ExternalSignInService(
     IExternalIdTokenValidator idTokenValidator,
     IExternalIdentityRepository externalIdentityRepository,
     IUserRepository userRepository,
+    IRefreshTokenService refreshTokenService,
+    IOptions<RefreshTokenOptions> refreshTokenOptions,
     IUnitOfWork unitOfWork)
 {
     public const string DefaultRole = "template-user";
@@ -25,7 +28,8 @@ public sealed class ExternalSignInService(
             var existingUser = await userRepository.GetByIdAsync(externalIdentity.UserId, cancellationToken)
                 ?? throw new InvalidOperationException("External identity is linked to a missing user.");
 
-            return new ExternalSignInResult(existingUser, [DefaultRole], payload);
+            var existingRefreshToken = await IssueRefreshTokenAsync(existingUser.Id, cancellationToken);
+            return new ExternalSignInResult(existingUser, [DefaultRole], payload, existingRefreshToken);
         }
 
         // Intentionally does not auto-link by email to prevent account takeover scenarios.
@@ -37,7 +41,18 @@ public sealed class ExternalSignInService(
 
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
-        return new ExternalSignInResult(user, [DefaultRole], payload);
+        var refreshToken = await IssueRefreshTokenAsync(user.Id, cancellationToken);
+        return new ExternalSignInResult(user, [DefaultRole], payload, refreshToken);
+    }
+
+    private async Task<RefreshTokenResult?> IssueRefreshTokenAsync(Guid userId, CancellationToken cancellationToken)
+    {
+        if (!refreshTokenOptions.Value.Enabled)
+        {
+            return null;
+        }
+
+        return await refreshTokenService.IssueAsync(userId, cancellationToken);
     }
 
     private static string BuildDisplayName(ExternalIdentityPayload payload)
@@ -60,4 +75,5 @@ public sealed class ExternalSignInService(
 public sealed record ExternalSignInResult(
     User User,
     IReadOnlyList<string> Roles,
-    ExternalIdentityPayload Payload);
+    ExternalIdentityPayload Payload,
+    RefreshTokenResult? RefreshToken);
