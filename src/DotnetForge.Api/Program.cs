@@ -1,7 +1,19 @@
+using DotnetForge.Api.Extensions;
+
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddApiServices();
 
 var app = builder.Build();
 
-app.MapGet("/", () => Results.Ok(new { Service = "DotnetForge.Api", Status = "BootstrapReady" }));
+app.Logger.LogInformation("Starting {ApplicationName} in {EnvironmentName}",
+    app.Environment.ApplicationName,
+    app.Environment.EnvironmentName);
+
+app.UseApiPipeline();
+
+app.Logger.LogInformation("{ApplicationName} started and endpoints registered", app.Environment.ApplicationName);
 
 app.Run();
+
+public partial class Program;

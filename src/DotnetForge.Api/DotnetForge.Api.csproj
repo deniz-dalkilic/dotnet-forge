@@ -10,4 +10,7 @@
     <ProjectReference Include="..\DotnetForge.Application\DotnetForge.Application.csproj" />
     <ProjectReference Include="..\DotnetForge.Infrastructure\DotnetForge.Infrastructure.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
+  </ItemGroup>
 </Project>
