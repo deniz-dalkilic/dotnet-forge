@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using DotnetForge.Api.Extensions;
 
 namespace DotnetForge.Api.Middleware;
 
@@ -15,7 +16,7 @@ public sealed class RequestLoggingMiddleware
 
     public async Task Invoke(HttpContext context)
     {
-        var sw = Stopwatch.StartNew();
+        var stopwatch = Stopwatch.StartNew();
 
         try
         {
@@ -23,13 +24,19 @@ public sealed class RequestLoggingMiddleware
         }
         finally
         {
-            sw.Stop();
+            stopwatch.Stop();
+
             _logger.LogInformation(
-                "HTTP {Method} {Path} responded {StatusCode} in {ElapsedMs} ms",
-                context.Request.Method,
-                context.Request.Path.Value,
-                context.Response.StatusCode,
-                sw.Elapsed.TotalMilliseconds);
+                "Request completed {@RequestLog}",
+                new
+                {
+                    Method = context.Request.Method,
+                    Path = context.Request.Path.Value,
+                    StatusCode = context.Response.StatusCode,
+                    ElapsedMs = stopwatch.Elapsed.TotalMilliseconds,
+                    CorrelationId = context.GetCorrelationId(),
+                    TraceId = Activity.Current?.TraceId.ToString() ?? context.TraceIdentifier
+                });
         }
     }
 }

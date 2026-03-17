@@ -6,6 +6,7 @@ public static class ApplicationBuilderExtensions
 {
     public static WebApplication UseApiPipeline(this WebApplication app)
     {
+        app.UseMiddleware<CorrelationIdMiddleware>();
         app.UseMiddleware<RequestLoggingMiddleware>();
 
         if (app.Environment.IsDevelopment())

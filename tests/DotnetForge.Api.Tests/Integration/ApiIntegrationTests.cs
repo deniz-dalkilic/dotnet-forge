@@ -44,4 +44,28 @@ public sealed class ApiIntegrationTests
         var payload = await response.Content.ReadAsStringAsync();
         StringAssert.Contains(payload.ToLowerInvariant(), "pong");
     }
+
+    [TestMethod]
+    public async Task IncomingCorrelationId_IsReturnedInResponseHeader()
+    {
+        const string correlationId = "integration-test-correlation-id";
+        using var request = new HttpRequestMessage(HttpMethod.Get, "/ping");
+        request.Headers.Add("X-Correlation-ID", correlationId);
+
+        var response = await _client!.SendAsync(request);
+
+        Assert.IsTrue(response.IsSuccessStatusCode);
+        Assert.IsTrue(response.Headers.TryGetValues("X-Correlation-ID", out var values));
+        CollectionAssert.Contains(values.ToList(), correlationId);
+    }
+
+    [TestMethod]
+    public async Task MissingCorrelationId_GeneratesAndReturnsHeader()
+    {
+        var response = await _client!.GetAsync("/ping");
+
+        Assert.IsTrue(response.IsSuccessStatusCode);
+        Assert.IsTrue(response.Headers.TryGetValues("X-Correlation-ID", out var values));
+        Assert.IsFalse(string.IsNullOrWhiteSpace(values.FirstOrDefault()));
+    }
 }
