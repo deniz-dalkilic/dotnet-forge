@@ -1,0 +1,10 @@
+{
+  "$schema": "http://json.schemastore.org/template",
+  "author": "Deniz Dalkilic",
+  "classifications": ["Web", "API", "Clean Architecture"],
+  "identity": "DenizDalkilic.DotnetForge.CleanArchitecture",
+  "name": ".NET Forge Clean Architecture Template",
+  "shortName": "dnf-cleanapi",
+  "sourceName": "DotnetForge",
+  "preferNameDirectory": true
+}

@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AssemblyName>DotnetForge.Api</AssemblyName>
+    <RootNamespace>DotnetForge.Api</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\DotnetForge.Application\DotnetForge.Application.csproj" />
+    <ProjectReference Include="..\DotnetForge.Infrastructure\DotnetForge.Infrastructure.csproj" />
+  </ItemGroup>
+</Project>

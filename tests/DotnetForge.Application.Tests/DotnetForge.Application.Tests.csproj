@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AssemblyName>DotnetForge.Application.Tests</AssemblyName>
+    <RootNamespace>DotnetForge.Application.Tests</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\DotnetForge.Application\DotnetForge.Application.csproj" />
+  </ItemGroup>
+</Project>
