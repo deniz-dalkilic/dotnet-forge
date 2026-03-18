@@ -6,12 +6,14 @@ public static class ApplicationBuilderExtensions
 {
     public static WebApplication UseApiPipeline(this WebApplication app)
     {
+        app.UseMiddleware<GlobalExceptionHandlingMiddleware>();
         app.UseMiddleware<CorrelationIdMiddleware>();
         app.UseMiddleware<RequestLoggingMiddleware>();
 
         if (app.Environment.IsDevelopment())
         {
             app.MapOpenApi();
+            app.MapDiagnosticsEndpoints();
         }
 
         app.MapForgeEndpoints();

@@ -1,4 +1,6 @@
 using System.Net;
+using System.Text.Json;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
@@ -13,7 +15,8 @@ public sealed class ApiIntegrationTests
     [ClassInitialize]
     public static void ClassInitialize(TestContext _)
     {
-        _factory = new WebApplicationFactory<Program>();
+        _factory = new WebApplicationFactory<Program>()
+            .WithWebHostBuilder(builder => builder.UseEnvironment("Development"));
     }
 
     [TestInitialize]
@@ -67,5 +70,38 @@ public sealed class ApiIntegrationTests
         Assert.IsTrue(response.IsSuccessStatusCode);
         Assert.IsTrue(response.Headers.TryGetValues("X-Correlation-ID", out var values));
         Assert.IsFalse(string.IsNullOrWhiteSpace(values.FirstOrDefault()));
+    }
+
+    [TestMethod]
+    public async Task ValidationException_ReturnsProblemDetailsWith400()
+    {
+        var response = await _client!.GetAsync("/__diagnostics/errors/validation");
+        var content = await response.Content.ReadAsStringAsync();
+
+        Assert.AreEqual(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.AreEqual("application/problem+json", response.Content.Headers.ContentType?.MediaType);
+
+        using var document = JsonDocument.Parse(content);
+        Assert.AreEqual(400, document.RootElement.GetProperty("status").GetInt32());
+        Assert.AreEqual("Validation failed", document.RootElement.GetProperty("title").GetString());
+        Assert.IsTrue(document.RootElement.TryGetProperty("errors", out _));
+        Assert.IsTrue(document.RootElement.TryGetProperty("correlationId", out _));
+        Assert.IsTrue(document.RootElement.TryGetProperty("traceId", out _));
+    }
+
+    [TestMethod]
+    public async Task UnexpectedException_ReturnsProblemDetailsWith500()
+    {
+        var response = await _client!.GetAsync("/__diagnostics/errors/unexpected");
+        var content = await response.Content.ReadAsStringAsync();
+
+        Assert.AreEqual(HttpStatusCode.InternalServerError, response.StatusCode);
+        Assert.AreEqual("application/problem+json", response.Content.Headers.ContentType?.MediaType);
+
+        using var document = JsonDocument.Parse(content);
+        Assert.AreEqual(500, document.RootElement.GetProperty("status").GetInt32());
+        Assert.AreEqual("Unexpected server error", document.RootElement.GetProperty("title").GetString());
+        Assert.IsTrue(document.RootElement.TryGetProperty("correlationId", out _));
+        Assert.IsTrue(document.RootElement.TryGetProperty("traceId", out _));
     }
 }

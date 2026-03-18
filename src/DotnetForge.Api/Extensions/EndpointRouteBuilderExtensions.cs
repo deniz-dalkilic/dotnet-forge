@@ -1,3 +1,5 @@
+using DotnetForge.Api.Exceptions;
+
 namespace DotnetForge.Api.Extensions;
 
 public static class EndpointRouteBuilderExtensions
@@ -37,6 +39,23 @@ public static class EndpointRouteBuilderExtensions
 
         endpoints.MapHealthChecks("/health/live").WithName("HealthLive").WithTags("Health");
         endpoints.MapHealthChecks("/health/ready").WithName("HealthReady").WithTags("Health");
+
+        return endpoints;
+    }
+
+    public static IEndpointRouteBuilder MapDiagnosticsEndpoints(this IEndpointRouteBuilder endpoints)
+    {
+        var group = endpoints.MapGroup("/__diagnostics/errors").WithTags("Diagnostics");
+
+        group.MapGet("/validation", () =>
+        {
+            throw new ApiValidationException(new Dictionary<string, string[]>
+            {
+                ["name"] = ["The Name field is required."]
+            });
+        });
+
+        group.MapGet("/unexpected", () => { throw new Exception("Simulated unexpected failure for diagnostics testing."); });
 
         return endpoints;
     }
