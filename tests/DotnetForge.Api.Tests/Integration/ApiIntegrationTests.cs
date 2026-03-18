@@ -1,4 +1,5 @@
 using System.Net;
+using System.Net.Http.Json;
 using System.Text.Json;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -46,6 +47,33 @@ public sealed class ApiIntegrationTests
 
         var payload = await response.Content.ReadAsStringAsync();
         StringAssert.Contains(payload.ToLowerInvariant(), "pong");
+    }
+
+    [TestMethod]
+    public async Task CreateGreeting_ReturnsGreetingPayload_WhenRequestIsValid()
+    {
+        var response = await _client!.PostAsJsonAsync("/api/greetings", new { name = "Deniz" });
+        var content = await response.Content.ReadAsStringAsync();
+
+        Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
+        Assert.AreEqual("application/json; charset=utf-8", response.Content.Headers.ContentType?.ToString());
+        StringAssert.Contains(content, "Hello, Deniz!");
+    }
+
+    [TestMethod]
+    public async Task CreateGreeting_ReturnsValidationProblem_WhenRequestIsInvalid()
+    {
+        var response = await _client!.PostAsJsonAsync("/api/greetings", new { name = "" });
+        var content = await response.Content.ReadAsStringAsync();
+
+        Assert.AreEqual(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.AreEqual("application/problem+json", response.Content.Headers.ContentType?.MediaType);
+
+        using var document = JsonDocument.Parse(content);
+        Assert.AreEqual("Validation failed", document.RootElement.GetProperty("title").GetString());
+        Assert.IsTrue(document.RootElement.TryGetProperty("errors", out _));
+        Assert.IsTrue(document.RootElement.TryGetProperty("correlationId", out _));
+        Assert.IsTrue(document.RootElement.TryGetProperty("traceId", out _));
     }
 
     [TestMethod]

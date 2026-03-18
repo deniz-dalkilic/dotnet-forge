@@ -1,14 +1,26 @@
 # dotnet-forge
 
-Production-oriented reusable Clean Architecture starter skeleton for .NET 10.
+A simple, reusable .NET 10 starter focused on clean boundaries, minimal APIs, and production-friendly defaults.
 
-## Current phase
+## What is in the repository
 
-Phase 1 completed:
-- Naming-safe `DotnetForge` solution and project skeleton
-- Clean dependency direction between layers
-- Central package management and lock-file strategy enabled
-- Docker starter files added
+- A naming-safe solution rooted at `DotnetForge`
+- Minimal API host with correlation, request logging, and global exception handling
+- Application, Domain, Infrastructure, and Worker projects
+- Central package management and lock-file support
+- API integration tests and placeholder test projects for the other layers
+- Docker Compose for local PostgreSQL
+
+## Current sample flow
+
+The sample application includes a small end-to-end greeting flow:
+
+- request DTO in the Application layer
+- FluentValidation validator
+- explicit application service
+- domain interaction
+- API endpoint mapping
+- success response and validation failure response
 
 ## Solution layout
 
@@ -21,7 +33,3 @@ Phase 1 completed:
 - `tests/DotnetForge.Application.Tests`
 - `tests/DotnetForge.Domain.Tests`
 - `tests/DotnetForge.Infrastructure.Tests`
-
-## Notes
-
-No third-party package dependencies are introduced in Phase 1.
