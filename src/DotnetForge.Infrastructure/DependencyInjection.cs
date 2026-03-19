@@ -1,4 +1,5 @@
 using DotnetForge.Application.Greetings;
+using DotnetForge.Infrastructure.Caching;
 using DotnetForge.Infrastructure.Greetings;
 using DotnetForge.Infrastructure.HealthChecks;
 using DotnetForge.Infrastructure.Options;
@@ -15,6 +16,7 @@ public static class DependencyInjection
     public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
         services.AddDatabase(configuration);
+        services.AddForgeCaching(configuration);
         services.AddScoped<IGreetingRepository, GreetingRepository>();
 
         return services;

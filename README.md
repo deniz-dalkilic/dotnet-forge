@@ -11,6 +11,7 @@ A simple, reusable .NET 10 starter focused on clean boundaries, minimal APIs, an
 - API integration tests and placeholder test projects for the other layers
 - Docker Compose for local PostgreSQL
 - EF Core 10 + PostgreSQL persistence wiring with migration-ready infrastructure
+- HybridCache-based caching foundation with optional future distributed cache integration
 
 ## Current sample flow
 
@@ -33,6 +34,28 @@ docker compose -f docker/docker-compose.yml -f docker/docker-compose.override.ym
 ```
 
 The default development connection string is configured in `src/DotnetForge.Api/appsettings.json`.
+
+## Caching foundation
+
+The template uses `HybridCache` as the default caching direction for .NET 10. In V1, it runs perfectly well with in-memory storage only, so Redis is not a required runtime dependency.
+
+Set `Caching:Enabled` to `false` to disable cache usage without removing registrations or changing application code.
+
+Use in-memory/hybrid-only caching when:
+
+- you run a single API instance
+- cache entries are small and disposable
+- a cold cache after restart is acceptable
+- you want the simplest local development and early production setup
+
+Move to a distributed cache provider when:
+
+- you scale the API to multiple instances
+- cache consistency across nodes matters
+- restart cold-starts become expensive
+- you need cross-instance cache invalidation guarantees
+
+The `Caching:Distributed` section is intentionally present as an extension point for future `IDistributedCache`/Redis wiring without forcing that complexity into V1.
 
 ## Migrations
 

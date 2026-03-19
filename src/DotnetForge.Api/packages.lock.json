@@ -225,6 +225,7 @@
           "DotnetForge.Application": "[1.0.0, )",
           "DotnetForge.Domain": "[1.0.0, )",
           "Microsoft.EntityFrameworkCore": "[10.0.5, )",
+          "Microsoft.Extensions.Caching.Hybrid": "[10.4.0, )",
           "Npgsql.EntityFrameworkCore.PostgreSQL": "[10.0.1, )"
         }
       },
@@ -252,6 +253,12 @@
           "Microsoft.EntityFrameworkCore.Abstractions": "10.0.5",
           "Microsoft.EntityFrameworkCore.Analyzers": "10.0.5"
         }
+      },
+      "Microsoft.Extensions.Caching.Hybrid": {
+        "type": "CentralTransitive",
+        "requested": "[10.4.0, )",
+        "resolved": "10.4.0",
+        "contentHash": "4V+aMLQeU/p4VcIWIcvGro0L6HynmL2TrelL04Ce1iotP6T5+kjxuZQvl6P1ObSXIRPCbVXtQSt1NxK0fRIuag=="
       },
       "Npgsql.EntityFrameworkCore.PostgreSQL": {
         "type": "CentralTransitive",
