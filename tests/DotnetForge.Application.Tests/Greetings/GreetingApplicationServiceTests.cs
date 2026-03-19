@@ -14,6 +14,7 @@ public sealed class GreetingApplicationServiceTests
         var result = await _service.CreateGreetingAsync(new GreetingRequest("Deniz"));
 
         Assert.IsTrue(result.IsSuccess);
+        Assert.IsNull(result.Error);
         Assert.IsNotNull(result.Value);
         Assert.AreEqual("Deniz", result.Value.Name);
         StringAssert.Contains(result.Value.Message, "Deniz");
@@ -25,7 +26,20 @@ public sealed class GreetingApplicationServiceTests
         var result = await _service.CreateGreetingAsync(new GreetingRequest(string.Empty));
 
         Assert.IsTrue(result.IsFailure);
+        Assert.IsNotNull(result.Error);
+        Assert.AreEqual("validation.failed", result.Error.Code);
         Assert.IsNotNull(result.ValidationErrors);
         Assert.IsTrue(result.ValidationErrors.ContainsKey("Name"));
+    }
+
+    [TestMethod]
+    public async Task CreateGreetingAsync_TrimsNameThroughDomainInteraction()
+    {
+        var result = await _service.CreateGreetingAsync(new GreetingRequest("  Deniz  "));
+
+        Assert.IsTrue(result.IsSuccess);
+        Assert.IsNotNull(result.Value);
+        Assert.AreEqual("Deniz", result.Value.Name);
+        Assert.AreEqual("Hello, Deniz!", result.Value.Message);
     }
 }

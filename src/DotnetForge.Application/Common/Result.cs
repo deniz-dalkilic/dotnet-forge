@@ -22,7 +22,7 @@ public class Result
     public static Result Failure(Error error) => new(false, error);
 
     public static Result ValidationFailure(IReadOnlyDictionary<string, string[]> errors)
-        => new(false, Error.Validation("One or more validation errors occurred."), errors);
+        => new(false, Error.Validation("validation.failed", "One or more validation errors occurred."), errors);
 }
 
 public sealed class Result<T> : Result
@@ -40,5 +40,5 @@ public sealed class Result<T> : Result
     public static new Result<T> Failure(Error error) => new(default, false, error);
 
     public static Result<T> ValidationFailure(IReadOnlyDictionary<string, string[]> errors)
-        => new(default, false, Error.Validation("One or more validation errors occurred."), errors);
+        => new(default, false, Error.Validation("validation.failed", "One or more validation errors occurred."), errors);
 }

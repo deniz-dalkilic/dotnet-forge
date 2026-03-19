@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using DotnetForge.Api.Exceptions;
 using DotnetForge.Application.Greetings;
 
@@ -50,20 +49,8 @@ public static class EndpointRouteBuilderExtensions
             logger.LogInformation("Greeting endpoint executed for {Name}", request.Name);
 
             var result = await service.CreateGreetingAsync(request, cancellationToken);
-            if (result.IsFailure)
-            {
-                return Results.ValidationProblem(
-                    errors: result.ValidationErrors ?? new Dictionary<string, string[]>(),
-                    title: "Validation failed",
-                    type: "https://datatracker.ietf.org/doc/html/rfc9457",
-                    extensions: new Dictionary<string, object?>
-                    {
-                        ["correlationId"] = httpContext.GetCorrelationId(),
-                        ["traceId"] = Activity.Current?.TraceId.ToString() ?? httpContext.TraceIdentifier
-                    });
-            }
 
-            return Results.Ok(result.Value);
+            return result.ToApiResult(httpContext);
         })
         .WithName("CreateGreeting")
         .WithTags("Greetings")

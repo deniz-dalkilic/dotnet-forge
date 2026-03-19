@@ -1,4 +1,5 @@
 using DotnetForge.Api.Middleware;
+using Scalar.AspNetCore;
 
 namespace DotnetForge.Api.Extensions;
 
@@ -13,6 +14,10 @@ public static class ApplicationBuilderExtensions
         if (app.Environment.IsDevelopment())
         {
             app.MapOpenApi();
+            app.MapScalarApiReference("/scalar", options => options
+                .WithTitle(".NET Forge Clean Architecture Template")
+                .WithOpenApiRoutePattern("/openapi/{documentName}.json")
+                .DisableAgent());
             app.MapDiagnosticsEndpoints();
         }
 

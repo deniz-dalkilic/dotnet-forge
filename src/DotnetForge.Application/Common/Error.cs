@@ -1,8 +1,20 @@
 namespace DotnetForge.Application.Common;
 
-public sealed record Error(string Code, string Message)
+public enum ErrorType
 {
-    public static Error Validation(string message) => new("validation", message);
+    Validation,
+    Conflict,
+    NotFound,
+    Unexpected
+}
 
-    public static Error Unexpected(string message) => new("unexpected", message);
+public sealed record Error(string Code, string Message, ErrorType Type)
+{
+    public static Error Validation(string code, string message) => new(code, message, ErrorType.Validation);
+
+    public static Error Conflict(string code, string message) => new(code, message, ErrorType.Conflict);
+
+    public static Error NotFound(string code, string message) => new(code, message, ErrorType.NotFound);
+
+    public static Error Unexpected(string code, string message) => new(code, message, ErrorType.Unexpected);
 }

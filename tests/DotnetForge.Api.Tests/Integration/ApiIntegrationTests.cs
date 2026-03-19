@@ -74,6 +74,7 @@ public sealed class ApiIntegrationTests
         Assert.IsTrue(document.RootElement.TryGetProperty("errors", out _));
         Assert.IsTrue(document.RootElement.TryGetProperty("correlationId", out _));
         Assert.IsTrue(document.RootElement.TryGetProperty("traceId", out _));
+        Assert.AreEqual("validation.failed", document.RootElement.GetProperty("errorCode").GetString());
     }
 
     [TestMethod]

@@ -28,7 +28,7 @@ public sealed class GreetingApplicationService : IGreetingApplicationService
         }
 
         var greeting = Greeting.Create(request.Name, DateTimeOffset.UtcNow);
-        var response = new GreetingResponse(greeting.Name, greeting.Message, greeting.CreatedAtUtc);
+        var response = GreetingResponse.FromDomain(greeting);
 
         return Result<GreetingResponse>.Success(response);
     }
