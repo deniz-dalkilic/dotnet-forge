@@ -50,11 +50,34 @@ public static class EndpointRouteBuilderExtensions
 
             var result = await service.CreateGreetingAsync(request, cancellationToken);
 
+            if (result.IsSuccess && result.Value is not null)
+            {
+                return Results.Created($"/api/greetings/{result.Value.Id}", result.Value);
+            }
+
             return result.ToApiResult(httpContext);
         })
         .WithName("CreateGreeting")
         .WithTags("Greetings")
-        .WithSummary("Creates a greeting using the application layer service.");
+        .WithSummary("Creates and persists a greeting using the application layer service.");
+
+        endpoints.MapGet("/api/greetings/{id:guid}", async (
+            Guid id,
+            IGreetingApplicationService service,
+            ILoggerFactory loggerFactory,
+            HttpContext httpContext,
+            CancellationToken cancellationToken) =>
+        {
+            var logger = loggerFactory.CreateLogger("DotnetForge.Api.Greetings");
+            logger.LogInformation("Greeting read endpoint executed for {GreetingId}", id);
+
+            var result = await service.GetGreetingByIdAsync(id, cancellationToken);
+
+            return result.ToApiResult(httpContext);
+        })
+        .WithName("GetGreetingById")
+        .WithTags("Greetings")
+        .WithSummary("Reads a persisted greeting by identifier.");
 
         endpoints.MapHealthChecks("/health/live").WithName("HealthLive").WithTags("Health");
         endpoints.MapHealthChecks("/health/ready").WithName("HealthReady").WithTags("Health");

@@ -1,8 +1,13 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
+using DotnetForge.Application.Greetings;
+using DotnetForge.Domain.Greetings;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace DotnetForge.Api.Tests.Integration;
@@ -17,13 +22,31 @@ public sealed class ApiIntegrationTests
     public static void ClassInitialize(TestContext _)
     {
         _factory = new WebApplicationFactory<Program>()
-            .WithWebHostBuilder(builder => builder.UseEnvironment("Development"));
+            .WithWebHostBuilder(builder =>
+            {
+                builder.UseEnvironment("Development");
+                builder.ConfigureAppConfiguration((_, configurationBuilder) =>
+                {
+                    configurationBuilder.AddInMemoryCollection(new Dictionary<string, string?>
+                    {
+                        ["Database:ApplyMigrationsOnStartup"] = "false"
+                    });
+                });
+                builder.ConfigureServices(services =>
+                {
+                    services.RemoveAll<IGreetingRepository>();
+                    services.AddSingleton<TestGreetingRepository>();
+                    services.AddScoped<IGreetingRepository>(serviceProvider =>
+                        serviceProvider.GetRequiredService<TestGreetingRepository>());
+                });
+            });
     }
 
     [TestInitialize]
     public void TestInitialize()
     {
         _client = _factory!.CreateClient();
+        _factory.Services.GetRequiredService<TestGreetingRepository>().Clear();
     }
 
     [TestMethod]
@@ -55,9 +78,35 @@ public sealed class ApiIntegrationTests
         var response = await _client!.PostAsJsonAsync("/api/greetings", new { name = "Deniz" });
         var content = await response.Content.ReadAsStringAsync();
 
-        Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
+        Assert.AreEqual(HttpStatusCode.Created, response.StatusCode);
         Assert.AreEqual("application/json; charset=utf-8", response.Content.Headers.ContentType?.ToString());
         StringAssert.Contains(content, "Hello, Deniz!");
+    }
+
+    [TestMethod]
+    public async Task GetGreetingById_ReturnsGreetingPayload_WhenGreetingExists()
+    {
+        var createResponse = await _client!.PostAsJsonAsync("/api/greetings", new { name = "Deniz" });
+        var createdPayload = await createResponse.Content.ReadFromJsonAsync<GreetingContract>();
+
+        var response = await _client.GetAsync($"/api/greetings/{createdPayload!.Id}");
+        var content = await response.Content.ReadAsStringAsync();
+
+        Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
+        StringAssert.Contains(content, createdPayload.Id.ToString());
+    }
+
+    [TestMethod]
+    public async Task GetGreetingById_ReturnsNotFoundProblem_WhenGreetingDoesNotExist()
+    {
+        var response = await _client!.GetAsync($"/api/greetings/{Guid.NewGuid()}");
+        var content = await response.Content.ReadAsStringAsync();
+
+        Assert.AreEqual(HttpStatusCode.NotFound, response.StatusCode);
+        Assert.AreEqual("application/problem+json", response.Content.Headers.ContentType?.MediaType);
+
+        using var document = JsonDocument.Parse(content);
+        Assert.AreEqual("greetings.not_found", document.RootElement.GetProperty("errorCode").GetString());
     }
 
     [TestMethod]
@@ -132,5 +181,29 @@ public sealed class ApiIntegrationTests
         Assert.AreEqual("Unexpected server error", document.RootElement.GetProperty("title").GetString());
         Assert.IsTrue(document.RootElement.TryGetProperty("correlationId", out _));
         Assert.IsTrue(document.RootElement.TryGetProperty("traceId", out _));
+    }
+
+    private sealed record GreetingContract(Guid Id, string Name, string Message, DateTimeOffset CreatedAtUtc);
+
+    private sealed class TestGreetingRepository : IGreetingRepository
+    {
+        private readonly Dictionary<Guid, Greeting> _greetings = [];
+
+        public Task AddAsync(Greeting greeting, CancellationToken cancellationToken = default)
+        {
+            _greetings[greeting.Id] = greeting;
+            return Task.CompletedTask;
+        }
+
+        public Task<Greeting?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
+        {
+            _greetings.TryGetValue(id, out var greeting);
+            return Task.FromResult(greeting);
+        }
+
+        public void Clear()
+        {
+            _greetings.Clear();
+        }
     }
 }

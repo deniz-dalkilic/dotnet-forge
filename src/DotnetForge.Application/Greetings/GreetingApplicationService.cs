@@ -7,10 +7,14 @@ namespace DotnetForge.Application.Greetings;
 public sealed class GreetingApplicationService : IGreetingApplicationService
 {
     private readonly IValidator<GreetingRequest> _validator;
+    private readonly IGreetingRepository _greetingRepository;
 
-    public GreetingApplicationService(IValidator<GreetingRequest> validator)
+    public GreetingApplicationService(
+        IValidator<GreetingRequest> validator,
+        IGreetingRepository greetingRepository)
     {
         _validator = validator;
+        _greetingRepository = greetingRepository;
     }
 
     public async Task<Result<GreetingResponse>> CreateGreetingAsync(GreetingRequest request, CancellationToken cancellationToken = default)
@@ -28,8 +32,21 @@ public sealed class GreetingApplicationService : IGreetingApplicationService
         }
 
         var greeting = Greeting.Create(request.Name, DateTimeOffset.UtcNow);
+        await _greetingRepository.AddAsync(greeting, cancellationToken);
         var response = GreetingResponse.FromDomain(greeting);
 
         return Result<GreetingResponse>.Success(response);
+    }
+
+    public async Task<Result<GreetingResponse>> GetGreetingByIdAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        var greeting = await _greetingRepository.GetByIdAsync(id, cancellationToken);
+        if (greeting is null)
+        {
+            return Result<GreetingResponse>.Failure(
+                Error.NotFound("greetings.not_found", $"Greeting '{id}' was not found."));
+        }
+
+        return Result<GreetingResponse>.Success(GreetingResponse.FromDomain(greeting));
     }
 }
