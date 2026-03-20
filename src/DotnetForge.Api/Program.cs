@@ -1,7 +1,9 @@
 using DotnetForge.Api.Extensions;
+using DotnetForge.Infrastructure.Observability;
 
 var builder = WebApplication.CreateBuilder(args);
 
+builder.AddForgeObservability("DotnetForge.Api", "1.0.0", includeAspNetCoreInstrumentation: true);
 builder.Services.AddApiServices(builder.Configuration);
 
 var app = builder.Build();

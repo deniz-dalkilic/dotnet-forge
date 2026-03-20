@@ -9,10 +9,11 @@ A reusable .NET 10 starter focused on clean boundaries, minimal APIs, and produc
 - Application, Domain, Infrastructure, and Worker projects
 - Central package management and lock-file support
 - API integration tests and layer-level test projects, including a Worker test foundation
-- Docker Compose for local PostgreSQL
+- Docker Compose for local PostgreSQL and Seq
 - EF Core 10 + PostgreSQL persistence wiring with migration-ready infrastructure
 - HybridCache-based caching foundation with optional future distributed cache integration
 - Hangfire-backed background processing with API enqueue endpoints and a dedicated Worker host for execution
+- Serilog + Seq logging and a practical OpenTelemetry trace/metric baseline
 
 ## Current sample flow
 
@@ -26,15 +27,20 @@ The sample application includes a small end-to-end greeting flow backed by Postg
 - API create/read endpoint mapping
 - success, validation failure, and not-found responses
 
-## Local database
+## Local infrastructure
 
-Start PostgreSQL for local development:
+Start PostgreSQL and Seq for local development:
 
 ```bash
 docker compose -f docker/docker-compose.yml -f docker/docker-compose.override.yml up -d
 ```
 
-The default development connection string is configured in `src/DotnetForge.Api/appsettings.json`.
+- PostgreSQL: `localhost:5432`
+- Seq ingestion: `http://localhost:5341`
+- Seq UI: `http://localhost:8081`
+- Seq first-run admin password: `dotnetforge`
+
+The default development connection string and observability settings are configured in the host `appsettings.json` files.
 
 ## Background processing foundation
 
@@ -52,6 +58,42 @@ Sample background processing endpoints:
 - Hangfire dashboard: `/hangfire`
 
 The Worker project also registers a recurring heartbeat job to demonstrate how future recurring jobs should be added without coupling them to the API host lifecycle.
+
+## Observability foundation
+
+The template provides a small but production-appropriate observability baseline:
+
+- **Serilog** for structured application logs
+- **Seq** as the default local structured log sink
+- **OpenTelemetry** traces and metrics for ASP.NET Core, `HttpClient`, runtime metrics, and custom background-job telemetry
+- **OTLP** exporter wiring kept optional and disabled by default so local development stays simple
+
+### Correlation and trace alignment
+
+- HTTP requests continue to use `X-Correlation-ID`
+- logs include correlation scope data and activity identifiers where available
+- OpenTelemetry traces use the same request pipeline and background jobs create internal activities for trace continuity in observability backends
+
+### Sensitive data guidance
+
+By default, the template avoids logging request/response bodies and headers. Keep these values redacted unless there is a strict operational reason to capture them:
+
+- `Authorization`
+- `Cookie`
+- `Set-Cookie`
+- `X-Api-Key`
+- connection strings, secrets, tokens, and personal data
+
+Also keep `Database:EnableSensitiveDataLogging` disabled outside carefully controlled local debugging scenarios.
+
+### Enabling OTLP later
+
+Set these values in `Observability:OpenTelemetry:Otlp` when you want to export traces and metrics to a collector:
+
+- `Enabled=true`
+- `Endpoint=http://localhost:4317` or your collector endpoint
+- `Protocol=grpc` or `http/protobuf`
+- optional `Headers` for authenticated collectors
 
 ## Caching foundation
 

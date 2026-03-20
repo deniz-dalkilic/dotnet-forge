@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Hangfire.Server;
 using Microsoft.Extensions.Logging;
 
@@ -15,7 +16,8 @@ public static class BackgroundJobScope
         {
             ["CorrelationId"] = effectiveCorrelationId,
             ["HangfireJobId"] = performContext?.BackgroundJob?.Id,
-            ["JobName"] = jobName
+            ["JobName"] = jobName,
+            ["TraceId"] = Activity.Current?.TraceId.ToString()
         });
     }
 }
