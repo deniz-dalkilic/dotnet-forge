@@ -1,5 +1,7 @@
 using DotnetForge.Api.Exceptions;
 using DotnetForge.Application.Greetings;
+using DotnetForge.Infrastructure.BackgroundProcessing;
+using Microsoft.Extensions.Options;
 
 namespace DotnetForge.Api.Extensions;
 
@@ -79,6 +81,72 @@ public static class EndpointRouteBuilderExtensions
         .WithTags("Greetings")
         .WithSummary("Reads a persisted greeting by identifier.");
 
+        var jobsGroup = endpoints.MapGroup("/api/jobs").WithTags("Jobs");
+
+        jobsGroup.MapPost("/greetings/fire-and-forget", (
+            FireAndForgetGreetingJobRequest request,
+            IBackgroundJobDispatcher backgroundJobDispatcher,
+            IOptions<HangfireOptions> options,
+            HttpContext httpContext) =>
+        {
+            if (!options.Value.QueueJobsViaApi)
+            {
+                return Results.Problem(
+                    statusCode: StatusCodes.Status503ServiceUnavailable,
+                    title: "Background job queuing is disabled",
+                    type: "https://datatracker.ietf.org/doc/html/rfc9457",
+                    extensions: new Dictionary<string, object?>
+                    {
+                        ["correlationId"] = httpContext.GetCorrelationId()
+                    });
+            }
+
+            var correlationId = httpContext.GetCorrelationId();
+            var jobId = backgroundJobDispatcher.EnqueueGreeting(request.Greeting, correlationId);
+
+            return Results.Accepted($"/api/jobs/{jobId}", new
+            {
+                jobId,
+                mode = "fire-and-forget",
+                correlationId
+            });
+        })
+        .WithName("EnqueueFireAndForgetGreetingJob")
+        .WithSummary("Queues a sample fire-and-forget Hangfire job.");
+
+        jobsGroup.MapPost("/greetings/scheduled", (
+            ScheduledGreetingJobRequest request,
+            IBackgroundJobDispatcher backgroundJobDispatcher,
+            IOptions<HangfireOptions> options,
+            HttpContext httpContext) =>
+        {
+            if (!options.Value.QueueJobsViaApi)
+            {
+                return Results.Problem(
+                    statusCode: StatusCodes.Status503ServiceUnavailable,
+                    title: "Background job queuing is disabled",
+                    type: "https://datatracker.ietf.org/doc/html/rfc9457",
+                    extensions: new Dictionary<string, object?>
+                    {
+                        ["correlationId"] = httpContext.GetCorrelationId()
+                    });
+            }
+
+            var delay = TimeSpan.FromSeconds(Math.Clamp(request.DelaySeconds, 1, 3600));
+            var correlationId = httpContext.GetCorrelationId();
+            var jobId = backgroundJobDispatcher.ScheduleGreeting(request.Greeting, correlationId, delay);
+
+            return Results.Accepted($"/api/jobs/{jobId}", new
+            {
+                jobId,
+                mode = "scheduled",
+                delaySeconds = delay.TotalSeconds,
+                correlationId
+            });
+        })
+        .WithName("ScheduleGreetingJob")
+        .WithSummary("Schedules a sample Hangfire job with a short delay.");
+
         endpoints.MapHealthChecks("/health/live").WithName("HealthLive").WithTags("Health");
         endpoints.MapHealthChecks("/health/ready").WithName("HealthReady").WithTags("Health");
 
@@ -101,4 +169,8 @@ public static class EndpointRouteBuilderExtensions
 
         return endpoints;
     }
+
+    public sealed record FireAndForgetGreetingJobRequest(string Greeting);
+
+    public sealed record ScheduledGreetingJobRequest(string Greeting, int DelaySeconds = 30);
 }

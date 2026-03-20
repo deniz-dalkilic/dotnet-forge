@@ -11,6 +11,7 @@
     <ProjectReference Include="..\DotnetForge.Infrastructure\DotnetForge.Infrastructure.csproj" />
   </ItemGroup>
   <ItemGroup>
+    <PackageReference Include="Hangfire.AspNetCore" />
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design">
       <PrivateAssets>all</PrivateAssets>

@@ -1,17 +1,18 @@
 # dotnet-forge
 
-A simple, reusable .NET 10 starter focused on clean boundaries, minimal APIs, and production-friendly defaults.
+A reusable .NET 10 starter focused on clean boundaries, minimal APIs, and production-friendly defaults.
 
 ## What is in the repository
 
 - A naming-safe solution rooted at `DotnetForge`
-- Minimal API host with correlation, request logging, and global exception handling
+- Minimal API host with correlation, request logging, global exception handling, and Problem Details responses
 - Application, Domain, Infrastructure, and Worker projects
 - Central package management and lock-file support
-- API integration tests and placeholder test projects for the other layers
+- API integration tests and layer-level test projects, including a Worker test foundation
 - Docker Compose for local PostgreSQL
 - EF Core 10 + PostgreSQL persistence wiring with migration-ready infrastructure
 - HybridCache-based caching foundation with optional future distributed cache integration
+- Hangfire-backed background processing with API enqueue endpoints and a dedicated Worker host for execution
 
 ## Current sample flow
 
@@ -34,6 +35,23 @@ docker compose -f docker/docker-compose.yml -f docker/docker-compose.override.ym
 ```
 
 The default development connection string is configured in `src/DotnetForge.Api/appsettings.json`.
+
+## Background processing foundation
+
+The template uses Hangfire with PostgreSQL storage and splits responsibilities like this:
+
+- **API host**: accepts HTTP requests, exposes the dashboard, and enqueues jobs
+- **Worker host**: runs the Hangfire server and registers recurring jobs
+
+This is the most pragmatic template default because it keeps the API process lightweight while preserving a clean extraction path toward a dedicated background-processing deployment later.
+
+Sample background processing endpoints:
+
+- `POST /api/jobs/greetings/fire-and-forget`
+- `POST /api/jobs/greetings/scheduled`
+- Hangfire dashboard: `/hangfire`
+
+The Worker project also registers a recurring heartbeat job to demonstrate how future recurring jobs should be added without coupling them to the API host lifecycle.
 
 ## Caching foundation
 
@@ -87,3 +105,4 @@ dotnet ef database update \
 - `tests/DotnetForge.Application.Tests`
 - `tests/DotnetForge.Domain.Tests`
 - `tests/DotnetForge.Infrastructure.Tests`
+- `tests/DotnetForge.Worker.Tests`

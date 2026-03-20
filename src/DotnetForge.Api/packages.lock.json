@@ -2,6 +2,15 @@
   "version": 2,
   "dependencies": {
     "net10.0": {
+      "Hangfire.AspNetCore": {
+        "type": "Direct",
+        "requested": "[1.8.23, )",
+        "resolved": "1.8.23",
+        "contentHash": "TXpOl7kX4xXq5bLEqqWCpt9zh3TaouDwtb3GDtzGHX5uSC2RaAqZzn2swevivx3Uki16slXIigiPtgr4TPKpsg==",
+        "dependencies": {
+          "Hangfire.NetCore": "[1.8.23]"
+        }
+      },
       "Microsoft.AspNetCore.OpenApi": {
         "type": "Direct",
         "requested": "[10.0.5, )",
@@ -33,6 +42,24 @@
         "requested": "[2.13.11, )",
         "resolved": "2.13.11",
         "contentHash": "bH99KIEEaYhC+mMM9011OJtou0y/9O2NXo6h9/k104sAniMzFSGKNaiIX6NRkxc487MJD8vYu3I3nJtW/nU/3g=="
+      },
+      "Dapper": {
+        "type": "Transitive",
+        "resolved": "2.0.123",
+        "contentHash": "RDFF4rBLLmbpi6pwkY7q/M6UXHRJEOerplDGE5jwEkP/JGJnBauAClYavNKJPW1yOTWRPIyfj4is3EaJxQXILQ=="
+      },
+      "Dapper.AOT": {
+        "type": "Transitive",
+        "resolved": "1.0.48",
+        "contentHash": "rsLM3yKr4g+YKKox9lhc8D+kz67P7Q9+xdyn1LmCsoYr1kYpJSm+Nt6slo5UrfUrcTiGJ57zUlyO8XUdV7G7iA=="
+      },
+      "Hangfire.Core": {
+        "type": "Transitive",
+        "resolved": "1.8.23",
+        "contentHash": "YCOTtF3NNOQI83PlfjeNDDBkofJDfdET2CwhfQsiVBwmsU6lP19QW9NVTIH9epl+MnOsyFC2G1RnlPSGV8F1FQ==",
+        "dependencies": {
+          "Newtonsoft.Json": "11.0.1"
+        }
       },
       "Humanizer.Core": {
         "type": "Transitive",
@@ -224,6 +251,8 @@
         "dependencies": {
           "DotnetForge.Application": "[1.0.0, )",
           "DotnetForge.Domain": "[1.0.0, )",
+          "Hangfire.NetCore": "[1.8.23, )",
+          "Hangfire.PostgreSql": "[1.21.0, )",
           "Microsoft.EntityFrameworkCore": "[10.0.5, )",
           "Microsoft.Extensions.Caching.Hybrid": "[10.4.0, )",
           "Npgsql.EntityFrameworkCore.PostgreSQL": "[10.0.1, )"
@@ -242,6 +271,27 @@
         "contentHash": "D0VXh4dtjjX2aQizuaa0g6R8X3U1JaVqJPfGCvLwZX9t/O2h7tkpbitbadQMfwcgSPdDbI2vDxuwRMv/Uf9dHA==",
         "dependencies": {
           "FluentValidation": "12.1.1"
+        }
+      },
+      "Hangfire.NetCore": {
+        "type": "CentralTransitive",
+        "requested": "[1.8.23, )",
+        "resolved": "1.8.23",
+        "contentHash": "SmvUJF/u5MCP666R5Y1V+GntqBc4RCWJqn5ztMMN67d53Cx5cuaWR0YNLMrabjylwLarFYJ7EdR9RnGEZzp/dg==",
+        "dependencies": {
+          "Hangfire.Core": "[1.8.23]"
+        }
+      },
+      "Hangfire.PostgreSql": {
+        "type": "CentralTransitive",
+        "requested": "[1.21.0, )",
+        "resolved": "1.21.0",
+        "contentHash": "GdZAT6dW/sBvQ7zZ7lOrAe45N99VF9AsYmdQy3fBhq0bn0PhaYUglQR2ur8TJRQlsBQpcCIUFQP1gV4ergPQmQ==",
+        "dependencies": {
+          "Dapper": "2.0.123",
+          "Dapper.AOT": "1.0.48",
+          "Hangfire.Core": "1.8.0",
+          "Npgsql": "6.0.11"
         }
       },
       "Microsoft.EntityFrameworkCore": {

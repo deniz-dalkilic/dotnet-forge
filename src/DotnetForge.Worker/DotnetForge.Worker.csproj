@@ -9,6 +9,7 @@
   <ItemGroup>
     <ProjectReference Include="..\DotnetForge.Application\DotnetForge.Application.csproj" />
     <ProjectReference Include="..\DotnetForge.Infrastructure\DotnetForge.Infrastructure.csproj" />
+    <PackageReference Include="Hangfire.NetCore" />
     <PackageReference Include="Microsoft.Extensions.Hosting" />
     <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" />
   </ItemGroup>

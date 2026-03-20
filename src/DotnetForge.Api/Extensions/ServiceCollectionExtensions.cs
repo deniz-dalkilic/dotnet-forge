@@ -1,5 +1,6 @@
 using DotnetForge.Application;
 using DotnetForge.Infrastructure;
+using DotnetForge.Infrastructure.BackgroundProcessing;
 
 namespace DotnetForge.Api.Extensions;
 
@@ -9,6 +10,7 @@ public static class ServiceCollectionExtensions
     {
         services.AddApplication();
         services.AddInfrastructure(configuration);
+        services.AddForgeHangfire(configuration, HangfireHostRole.Api);
         services.AddProblemDetails();
         services.AddOpenApi();
         services.AddHealthChecks();

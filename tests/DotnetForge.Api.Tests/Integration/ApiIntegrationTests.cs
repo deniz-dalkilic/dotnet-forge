@@ -3,6 +3,7 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using DotnetForge.Application.Greetings;
 using DotnetForge.Domain.Greetings;
+using DotnetForge.Infrastructure.BackgroundProcessing;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Configuration;
@@ -29,7 +30,8 @@ public sealed class ApiIntegrationTests
                 {
                     configurationBuilder.AddInMemoryCollection(new Dictionary<string, string?>
                     {
-                        ["Database:ApplyMigrationsOnStartup"] = "false"
+                        ["Database:ApplyMigrationsOnStartup"] = "false",
+                        ["Hangfire:EnableDashboard"] = "false"
                     });
                 });
                 builder.ConfigureServices(services =>
@@ -38,6 +40,11 @@ public sealed class ApiIntegrationTests
                     services.AddSingleton<TestGreetingRepository>();
                     services.AddScoped<IGreetingRepository>(serviceProvider =>
                         serviceProvider.GetRequiredService<TestGreetingRepository>());
+
+                    services.RemoveAll<IBackgroundJobDispatcher>();
+                    services.AddSingleton<FakeBackgroundJobDispatcher>();
+                    services.AddSingleton<IBackgroundJobDispatcher>(serviceProvider =>
+                        serviceProvider.GetRequiredService<FakeBackgroundJobDispatcher>());
                 });
             });
     }
@@ -47,6 +54,7 @@ public sealed class ApiIntegrationTests
     {
         _client = _factory!.CreateClient();
         _factory.Services.GetRequiredService<TestGreetingRepository>().Clear();
+        _factory.Services.GetRequiredService<FakeBackgroundJobDispatcher>().Clear();
     }
 
     [TestMethod]
@@ -127,6 +135,46 @@ public sealed class ApiIntegrationTests
     }
 
     [TestMethod]
+    public async Task FireAndForgetJobEndpoint_QueuesJobAndReturnsAccepted()
+    {
+        const string correlationId = "integration-job-correlation-id";
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/jobs/greetings/fire-and-forget")
+        {
+            Content = JsonContent.Create(new { greeting = "Hello from integration test" })
+        };
+        request.Headers.Add("X-Correlation-ID", correlationId);
+
+        var response = await _client!.SendAsync(request);
+        var payload = await response.Content.ReadAsStringAsync();
+
+        Assert.AreEqual(HttpStatusCode.Accepted, response.StatusCode);
+        StringAssert.Contains(payload, "fire-and-forget");
+        StringAssert.Contains(payload, correlationId);
+
+        var dispatcher = _factory!.Services.GetRequiredService<FakeBackgroundJobDispatcher>();
+        Assert.AreEqual(1, dispatcher.EnqueuedJobs.Count);
+        Assert.AreEqual(correlationId, dispatcher.EnqueuedJobs[0].CorrelationId);
+    }
+
+    [TestMethod]
+    public async Task ScheduledJobEndpoint_QueuesJobAndReturnsAccepted()
+    {
+        var response = await _client!.PostAsJsonAsync("/api/jobs/greetings/scheduled", new
+        {
+            greeting = "Hello later",
+            delaySeconds = 15
+        });
+        var payload = await response.Content.ReadAsStringAsync();
+
+        Assert.AreEqual(HttpStatusCode.Accepted, response.StatusCode);
+        StringAssert.Contains(payload, "scheduled");
+
+        var dispatcher = _factory!.Services.GetRequiredService<FakeBackgroundJobDispatcher>();
+        Assert.AreEqual(1, dispatcher.ScheduledJobs.Count);
+        Assert.AreEqual(TimeSpan.FromSeconds(15), dispatcher.ScheduledJobs[0].Delay);
+    }
+
+    [TestMethod]
     public async Task IncomingCorrelationId_IsReturnedInResponseHeader()
     {
         const string correlationId = "integration-test-correlation-id";
@@ -204,6 +252,31 @@ public sealed class ApiIntegrationTests
         public void Clear()
         {
             _greetings.Clear();
+        }
+    }
+
+    private sealed class FakeBackgroundJobDispatcher : IBackgroundJobDispatcher
+    {
+        public List<(string Greeting, string CorrelationId)> EnqueuedJobs { get; } = [];
+
+        public List<(string Greeting, string CorrelationId, TimeSpan Delay)> ScheduledJobs { get; } = [];
+
+        public string EnqueueGreeting(string greeting, string correlationId)
+        {
+            EnqueuedJobs.Add((greeting, correlationId));
+            return Guid.NewGuid().ToString("n");
+        }
+
+        public string ScheduleGreeting(string greeting, string correlationId, TimeSpan delay)
+        {
+            ScheduledJobs.Add((greeting, correlationId, delay));
+            return Guid.NewGuid().ToString("n");
+        }
+
+        public void Clear()
+        {
+            EnqueuedJobs.Clear();
+            ScheduledJobs.Clear();
         }
     }
 }

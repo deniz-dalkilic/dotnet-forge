@@ -13,7 +13,7 @@ public sealed class Worker : BackgroundService
     {
         while (!stoppingToken.IsCancellationRequested)
         {
-            _logger.LogInformation("DotnetForge.Worker heartbeat at {Timestamp}", DateTimeOffset.UtcNow);
+            _logger.LogInformation("DotnetForge.Worker host heartbeat at {TimestampUtc}", DateTimeOffset.UtcNow);
             await Task.Delay(TimeSpan.FromMinutes(5), stoppingToken);
         }
     }

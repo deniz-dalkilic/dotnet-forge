@@ -1,6 +1,8 @@
 using DotnetForge.Api.Middleware;
+using DotnetForge.Infrastructure.BackgroundProcessing;
 using DotnetForge.Infrastructure.Options;
 using DotnetForge.Infrastructure.Persistence;
+using Hangfire;
 using Microsoft.EntityFrameworkCore;
 using Scalar.AspNetCore;
 
@@ -26,6 +28,7 @@ public static class ApplicationBuilderExtensions
             app.MapDiagnosticsEndpoints();
         }
 
+        app.MapHangfireDashboardIfEnabled();
         app.MapForgeEndpoints();
 
         return app;
@@ -45,5 +48,18 @@ public static class ApplicationBuilderExtensions
 
         app.Logger.LogInformation("Applying database migrations for {DbContext}.", nameof(ForgeDbContext));
         await dbContext.Database.MigrateAsync();
+    }
+
+    private static void MapHangfireDashboardIfEnabled(this WebApplication app)
+    {
+        var hangfireOptions = app.Services.GetRequiredService<Microsoft.Extensions.Options.IOptions<HangfireOptions>>().Value;
+        if (!hangfireOptions.EnableDashboard)
+        {
+            app.Logger.LogInformation("Hangfire dashboard disabled by configuration.");
+            return;
+        }
+
+        app.MapHangfireDashboard(hangfireOptions.DashboardPath);
+        app.Logger.LogInformation("Hangfire dashboard mapped at {DashboardPath}.", hangfireOptions.DashboardPath);
     }
 }
