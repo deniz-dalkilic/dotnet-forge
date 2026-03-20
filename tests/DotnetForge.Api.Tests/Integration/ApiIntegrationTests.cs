@@ -16,45 +16,20 @@ namespace DotnetForge.Api.Tests.Integration;
 [TestClass]
 public sealed class ApiIntegrationTests
 {
-    private static WebApplicationFactory<Program>? _factory;
+    private static ForgeApiFactory? _factory;
     private HttpClient? _client;
 
     [ClassInitialize]
     public static void ClassInitialize(TestContext _)
     {
-        _factory = new WebApplicationFactory<Program>()
-            .WithWebHostBuilder(builder =>
-            {
-                builder.UseEnvironment("Development");
-                builder.ConfigureAppConfiguration((_, configurationBuilder) =>
-                {
-                    configurationBuilder.AddInMemoryCollection(new Dictionary<string, string?>
-                    {
-                        ["Database:ApplyMigrationsOnStartup"] = "false",
-                        ["Hangfire:EnableDashboard"] = "false"
-                    });
-                });
-                builder.ConfigureServices(services =>
-                {
-                    services.RemoveAll<IGreetingRepository>();
-                    services.AddSingleton<TestGreetingRepository>();
-                    services.AddScoped<IGreetingRepository>(serviceProvider =>
-                        serviceProvider.GetRequiredService<TestGreetingRepository>());
-
-                    services.RemoveAll<IBackgroundJobDispatcher>();
-                    services.AddSingleton<FakeBackgroundJobDispatcher>();
-                    services.AddSingleton<IBackgroundJobDispatcher>(serviceProvider =>
-                        serviceProvider.GetRequiredService<FakeBackgroundJobDispatcher>());
-                });
-            });
+        _factory = new ForgeApiFactory();
     }
 
     [TestInitialize]
     public void TestInitialize()
     {
-        _client = _factory!.CreateClient();
-        _factory.Services.GetRequiredService<TestGreetingRepository>().Clear();
-        _factory.Services.GetRequiredService<FakeBackgroundJobDispatcher>().Clear();
+        _factory!.ResetState();
+        _client = _factory.CreateClient();
     }
 
     [TestMethod]
@@ -70,51 +45,45 @@ public sealed class ApiIntegrationTests
     }
 
     [TestMethod]
-    public async Task GetPing_ReturnsPong()
+    public async Task CreateGreeting_RoundTripsGreetingThroughReadEndpoint()
     {
-        var response = await _client!.GetAsync("/ping");
+        using var createRequest = new HttpRequestMessage(HttpMethod.Post, "/api/greetings")
+        {
+            Content = JsonContent.Create(new { name = "Deniz" })
+        };
+        createRequest.Headers.Add("X-Correlation-ID", "roundtrip-correlation-id");
 
-        Assert.IsTrue(response.IsSuccessStatusCode);
-
-        var payload = await response.Content.ReadAsStringAsync();
-        StringAssert.Contains(payload.ToLowerInvariant(), "pong");
-    }
-
-    [TestMethod]
-    public async Task CreateGreeting_ReturnsGreetingPayload_WhenRequestIsValid()
-    {
-        var response = await _client!.PostAsJsonAsync("/api/greetings", new { name = "Deniz" });
-        var content = await response.Content.ReadAsStringAsync();
-
-        Assert.AreEqual(HttpStatusCode.Created, response.StatusCode);
-        Assert.AreEqual("application/json; charset=utf-8", response.Content.Headers.ContentType?.ToString());
-        StringAssert.Contains(content, "Hello, Deniz!");
-    }
-
-    [TestMethod]
-    public async Task GetGreetingById_ReturnsGreetingPayload_WhenGreetingExists()
-    {
-        var createResponse = await _client!.PostAsJsonAsync("/api/greetings", new { name = "Deniz" });
+        var createResponse = await _client!.SendAsync(createRequest);
         var createdPayload = await createResponse.Content.ReadFromJsonAsync<GreetingContract>();
+        var readResponse = await _client.GetAsync($"/api/greetings/{createdPayload!.Id}");
+        var readPayload = await readResponse.Content.ReadFromJsonAsync<GreetingContract>();
 
-        var response = await _client.GetAsync($"/api/greetings/{createdPayload!.Id}");
-        var content = await response.Content.ReadAsStringAsync();
-
-        Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
-        StringAssert.Contains(content, createdPayload.Id.ToString());
+        Assert.AreEqual(HttpStatusCode.Created, createResponse.StatusCode);
+        Assert.AreEqual($"/api/greetings/{createdPayload.Id}", createResponse.Headers.Location?.OriginalString);
+        Assert.AreEqual("roundtrip-correlation-id", createResponse.Headers.GetValues("X-Correlation-ID").Single());
+        Assert.AreEqual(HttpStatusCode.OK, readResponse.StatusCode);
+        Assert.IsNotNull(readPayload);
+        Assert.AreEqual(createdPayload.Id, readPayload.Id);
+        Assert.AreEqual("Deniz", readPayload.Name);
+        Assert.AreEqual("Hello, Deniz!", readPayload.Message);
     }
 
     [TestMethod]
-    public async Task GetGreetingById_ReturnsNotFoundProblem_WhenGreetingDoesNotExist()
+    public async Task GetGreetingById_ReturnsNotFoundProblem_WithCorrelationMetadata()
     {
-        var response = await _client!.GetAsync($"/api/greetings/{Guid.NewGuid()}");
+        using var request = new HttpRequestMessage(HttpMethod.Get, $"/api/greetings/{Guid.NewGuid()}");
+        request.Headers.Add("X-Correlation-ID", "missing-greeting-correlation-id");
+
+        var response = await _client!.SendAsync(request);
         var content = await response.Content.ReadAsStringAsync();
 
         Assert.AreEqual(HttpStatusCode.NotFound, response.StatusCode);
         Assert.AreEqual("application/problem+json", response.Content.Headers.ContentType?.MediaType);
 
         using var document = JsonDocument.Parse(content);
+        Assert.AreEqual("missing-greeting-correlation-id", document.RootElement.GetProperty("correlationId").GetString());
         Assert.AreEqual("greetings.not_found", document.RootElement.GetProperty("errorCode").GetString());
+        Assert.IsFalse(string.IsNullOrWhiteSpace(document.RootElement.GetProperty("traceId").GetString()));
     }
 
     [TestMethod]
@@ -151,27 +120,42 @@ public sealed class ApiIntegrationTests
         StringAssert.Contains(payload, "fire-and-forget");
         StringAssert.Contains(payload, correlationId);
 
-        var dispatcher = _factory!.Services.GetRequiredService<FakeBackgroundJobDispatcher>();
-        Assert.AreEqual(1, dispatcher.EnqueuedJobs.Count);
-        Assert.AreEqual(correlationId, dispatcher.EnqueuedJobs[0].CorrelationId);
+        Assert.AreEqual(1, _factory!.Dispatcher.EnqueuedJobs.Count);
+        Assert.AreEqual(correlationId, _factory.Dispatcher.EnqueuedJobs[0].CorrelationId);
     }
 
     [TestMethod]
-    public async Task ScheduledJobEndpoint_QueuesJobAndReturnsAccepted()
+    public async Task ScheduledJobEndpoint_QueuesJobAndClampsDelay_WhenRequestExceedsUpperBound()
     {
         var response = await _client!.PostAsJsonAsync("/api/jobs/greetings/scheduled", new
         {
             greeting = "Hello later",
-            delaySeconds = 15
+            delaySeconds = 4000
         });
-        var payload = await response.Content.ReadAsStringAsync();
 
         Assert.AreEqual(HttpStatusCode.Accepted, response.StatusCode);
-        StringAssert.Contains(payload, "scheduled");
+        Assert.AreEqual(1, _factory!.Dispatcher.ScheduledJobs.Count);
+        Assert.AreEqual(TimeSpan.FromHours(1), _factory.Dispatcher.ScheduledJobs[0].Delay);
+    }
 
-        var dispatcher = _factory!.Services.GetRequiredService<FakeBackgroundJobDispatcher>();
-        Assert.AreEqual(1, dispatcher.ScheduledJobs.Count);
-        Assert.AreEqual(TimeSpan.FromSeconds(15), dispatcher.ScheduledJobs[0].Delay);
+    [TestMethod]
+    public async Task JobEndpoints_ReturnProblemDetails_WhenQueuingIsDisabled()
+    {
+        using var disabledFactory = new ForgeApiFactory(new Dictionary<string, string?>
+        {
+            ["Hangfire:QueueJobsViaApi"] = "false"
+        });
+        using var client = disabledFactory.CreateClient();
+
+        var response = await client.PostAsJsonAsync("/api/jobs/greetings/fire-and-forget", new { greeting = "Hello" });
+        var content = await response.Content.ReadAsStringAsync();
+
+        Assert.AreEqual(HttpStatusCode.ServiceUnavailable, response.StatusCode);
+        Assert.AreEqual("application/problem+json", response.Content.Headers.ContentType?.MediaType);
+
+        using var document = JsonDocument.Parse(content);
+        Assert.AreEqual("Background job queuing is disabled", document.RootElement.GetProperty("title").GetString());
+        Assert.IsTrue(document.RootElement.TryGetProperty("correlationId", out _));
     }
 
     [TestMethod]
@@ -233,6 +217,56 @@ public sealed class ApiIntegrationTests
 
     private sealed record GreetingContract(Guid Id, string Name, string Message, DateTimeOffset CreatedAtUtc);
 
+    private sealed class ForgeApiFactory : WebApplicationFactory<Program>
+    {
+        private readonly IReadOnlyDictionary<string, string?> _overrides;
+
+        public ForgeApiFactory(IReadOnlyDictionary<string, string?>? overrides = null)
+        {
+            _overrides = overrides ?? new Dictionary<string, string?>();
+        }
+
+        public TestGreetingRepository Repository { get; } = new();
+
+        public FakeBackgroundJobDispatcher Dispatcher { get; } = new();
+
+        public void ResetState()
+        {
+            Repository.Clear();
+            Dispatcher.Clear();
+        }
+
+        protected override void ConfigureWebHost(IWebHostBuilder builder)
+        {
+            builder.UseEnvironment("Development");
+            builder.ConfigureAppConfiguration((_, configurationBuilder) =>
+            {
+                var settings = new Dictionary<string, string?>
+                {
+                    ["Database:ApplyMigrationsOnStartup"] = "false",
+                    ["Hangfire:EnableDashboard"] = "false"
+                };
+
+                foreach (var pair in _overrides)
+                {
+                    settings[pair.Key] = pair.Value;
+                }
+
+                configurationBuilder.AddInMemoryCollection(settings);
+            });
+            builder.ConfigureServices(services =>
+            {
+                services.RemoveAll<IGreetingRepository>();
+                services.AddSingleton(Repository);
+                services.AddScoped<IGreetingRepository>(serviceProvider => serviceProvider.GetRequiredService<TestGreetingRepository>());
+
+                services.RemoveAll<IBackgroundJobDispatcher>();
+                services.AddSingleton(Dispatcher);
+                services.AddSingleton<IBackgroundJobDispatcher>(serviceProvider => serviceProvider.GetRequiredService<FakeBackgroundJobDispatcher>());
+            });
+        }
+    }
+
     private sealed class TestGreetingRepository : IGreetingRepository
     {
         private readonly Dictionary<Guid, Greeting> _greetings = [];
@@ -249,10 +283,7 @@ public sealed class ApiIntegrationTests
             return Task.FromResult(greeting);
         }
 
-        public void Clear()
-        {
-            _greetings.Clear();
-        }
+        public void Clear() => _greetings.Clear();
     }
 
     private sealed class FakeBackgroundJobDispatcher : IBackgroundJobDispatcher

@@ -39,9 +39,9 @@
       },
       "Scalar.AspNetCore": {
         "type": "Direct",
-        "requested": "[2.13.11, )",
-        "resolved": "2.13.11",
-        "contentHash": "bH99KIEEaYhC+mMM9011OJtou0y/9O2NXo6h9/k104sAniMzFSGKNaiIX6NRkxc487MJD8vYu3I3nJtW/nU/3g=="
+        "requested": "[2.13.13, )",
+        "resolved": "2.13.13",
+        "contentHash": "QS94/CNp2thhykXwBaOHjDe8Zlexs8v0QOrdLfUvxS85uW84IhCf1zGiOnYZNNtVxunJvtsr7yPgEP36TXnJ3w=="
       },
       "Dapper": {
         "type": "Transitive",
@@ -140,14 +140,6 @@
         "type": "Transitive",
         "resolved": "10.0.5",
         "contentHash": "ipC4u1VojgEfoIZhtbS2Sx5IluJTP/Jf1hz3yGsxGBgSukYY/CquI6rAjxn5H58CZgVn36qcuPPtNMwZ0AUzMg=="
-      },
-      "Microsoft.EntityFrameworkCore.Relational": {
-        "type": "Transitive",
-        "resolved": "10.0.5",
-        "contentHash": "uxmFjZEAB/KbsgWFSS4lLqkEHCfXxB2x0UcbiO4e5fCRpFFeTMSx/me6009nYJLu5IKlDwO1POh++P6RilFTDw==",
-        "dependencies": {
-          "Microsoft.EntityFrameworkCore": "10.0.5"
-        }
       },
       "Microsoft.Extensions.DependencyModel": {
         "type": "Transitive",
@@ -294,7 +286,7 @@
           "DotnetForge.Application": "[1.0.0, )",
           "DotnetForge.Domain": "[1.0.0, )",
           "Hangfire.NetCore": "[1.8.23, )",
-          "Hangfire.PostgreSql": "[1.21.0, )",
+          "Hangfire.PostgreSql": "[1.21.1, )",
           "Microsoft.EntityFrameworkCore": "[10.0.5, )",
           "Microsoft.Extensions.Caching.Hybrid": "[10.4.0, )",
           "Npgsql.EntityFrameworkCore.PostgreSQL": "[10.0.1, )",
@@ -337,9 +329,9 @@
       },
       "Hangfire.PostgreSql": {
         "type": "CentralTransitive",
-        "requested": "[1.21.0, )",
-        "resolved": "1.21.0",
-        "contentHash": "GdZAT6dW/sBvQ7zZ7lOrAe45N99VF9AsYmdQy3fBhq0bn0PhaYUglQR2ur8TJRQlsBQpcCIUFQP1gV4ergPQmQ==",
+        "requested": "[1.21.1, )",
+        "resolved": "1.21.1",
+        "contentHash": "hFNZAxv+1p72/XCZdImnH6ovCzZ2DKAMTOI8CReT0P3yw/k0b0YJP2teA18agNH1ZYInPzhtxGk8hx5n2cxbbQ==",
         "dependencies": {
           "Dapper": "2.0.123",
           "Dapper.AOT": "1.0.48",
@@ -355,6 +347,15 @@
         "dependencies": {
           "Microsoft.EntityFrameworkCore.Abstractions": "10.0.5",
           "Microsoft.EntityFrameworkCore.Analyzers": "10.0.5"
+        }
+      },
+      "Microsoft.EntityFrameworkCore.Relational": {
+        "type": "CentralTransitive",
+        "requested": "[10.0.5, )",
+        "resolved": "10.0.5",
+        "contentHash": "uxmFjZEAB/KbsgWFSS4lLqkEHCfXxB2x0UcbiO4e5fCRpFFeTMSx/me6009nYJLu5IKlDwO1POh++P6RilFTDw==",
+        "dependencies": {
+          "Microsoft.EntityFrameworkCore": "10.0.5"
         }
       },
       "Microsoft.Extensions.Caching.Hybrid": {
