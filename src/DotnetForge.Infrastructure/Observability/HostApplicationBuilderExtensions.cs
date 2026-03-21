@@ -33,6 +33,7 @@ public static class HostApplicationBuilderExtensions
             loggerConfiguration
                 .MinimumLevel.Information()
                 .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
+                .MinimumLevel.Override("Microsoft.Hosting.Lifetime", LogEventLevel.Information)
                 .MinimumLevel.Override("Microsoft.AspNetCore", LogEventLevel.Warning)
                 .MinimumLevel.Override("Microsoft.EntityFrameworkCore.Database.Command", LogEventLevel.Warning)
                 .Enrich.FromLogContext()
@@ -43,7 +44,7 @@ public static class HostApplicationBuilderExtensions
                 .Enrich.WithProcessId()
                 .Enrich.WithProperty("ServiceName", serviceName)
                 .Enrich.WithProperty("ServiceVersion", serviceVersion)
-                .WriteTo.Console();
+                .WriteTo.Console(outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {SourceContext} {Message:lj}{NewLine}{Exception}");
 
             if (observabilityOptions.Seq.Enabled && !string.IsNullOrWhiteSpace(observabilityOptions.Seq.ServerUrl))
             {

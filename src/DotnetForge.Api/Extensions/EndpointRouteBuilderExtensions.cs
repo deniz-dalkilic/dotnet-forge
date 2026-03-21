@@ -1,5 +1,6 @@
 using DotnetForge.Api.Exceptions;
 using DotnetForge.Application.Greetings;
+using DotnetForge.Application.ReferenceScenarios.Greetings;
 using DotnetForge.Infrastructure.BackgroundProcessing;
 using Microsoft.Extensions.Options;
 
@@ -146,6 +147,50 @@ public static class EndpointRouteBuilderExtensions
         })
         .WithName("ScheduleGreetingJob")
         .WithSummary("Schedules a sample Hangfire job with a short delay.");
+
+        var referenceScenarios = endpoints.MapGroup("/api/reference-scenarios/greetings").WithTags("Reference Scenarios");
+
+        referenceScenarios.MapPost("/execute", async (
+            ReferenceScenarioGreetingRequest request,
+            IReferenceScenarioGreetingService service,
+            ILoggerFactory loggerFactory,
+            HttpContext httpContext,
+            CancellationToken cancellationToken) =>
+        {
+            var correlationId = httpContext.GetCorrelationId();
+            var logger = loggerFactory.CreateLogger("DotnetForge.Api.ReferenceScenarios.Greetings");
+            logger.LogInformation(
+                "Executing reference scenario for {Name} with correlation {CorrelationId}",
+                request.Name,
+                correlationId);
+
+            var result = await service.ExecuteAsync(request, correlationId, cancellationToken);
+
+            if (result.IsSuccess && result.Value is not null)
+            {
+                return Results.Created($"/api/reference-scenarios/greetings/{result.Value.Id}", result.Value);
+            }
+
+            return result.ToApiResult(httpContext);
+        })
+        .WithName("ExecuteReferenceScenarioGreeting")
+        .WithSummary("Runs the canonical reference scenario for request validation, persistence, caching, and background job dispatch.");
+
+        referenceScenarios.MapGet("/{id:guid}", async (
+            Guid id,
+            IReferenceScenarioGreetingService service,
+            ILoggerFactory loggerFactory,
+            HttpContext httpContext,
+            CancellationToken cancellationToken) =>
+        {
+            var logger = loggerFactory.CreateLogger("DotnetForge.Api.ReferenceScenarios.Greetings");
+            logger.LogInformation("Reading reference scenario greeting {GreetingId}", id);
+
+            var result = await service.GetByIdAsync(id, cancellationToken);
+            return result.ToApiResult(httpContext);
+        })
+        .WithName("GetReferenceScenarioGreetingById")
+        .WithSummary("Reads the canonical reference scenario entity through the cache-aside application flow.");
 
         endpoints.MapHealthChecks("/health/live").WithName("HealthLive").WithTags("Health");
         endpoints.MapHealthChecks("/health/ready").WithName("HealthReady").WithTags("Health");

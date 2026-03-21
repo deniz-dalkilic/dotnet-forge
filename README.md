@@ -15,17 +15,37 @@ A reusable .NET 10 starter focused on clean boundaries, minimal APIs, and produc
 - Hangfire-backed background processing with API enqueue endpoints and a dedicated Worker host for execution
 - Serilog + Seq logging and a practical OpenTelemetry trace/metric baseline
 
-## Current sample flow
+## Reference scenario flow
 
-The sample application includes a small end-to-end greeting flow backed by PostgreSQL:
+The repository includes a canonical **Reference Scenario** for onboarding, debugging, and deriving new features. It lives in these areas:
 
-- request DTO in the Application layer
-- FluentValidation validator
-- explicit application service
-- domain interaction
-- EF Core persistence in Infrastructure
-- API create/read endpoint mapping
-- success, validation failure, and not-found responses
+- `src/DotnetForge.Api/Extensions/EndpointRouteBuilderExtensions.cs`
+- `src/DotnetForge.Application/ReferenceScenarios/Greetings/*`
+- `src/DotnetForge.Infrastructure/ReferenceScenarios/ReferenceScenarioJobDispatcher.cs`
+
+Reference scenario endpoints:
+
+- `POST /api/reference-scenarios/greetings/execute`
+- `GET /api/reference-scenarios/greetings/{id}`
+
+What this flow demonstrates end-to-end:
+
+- request handling in Minimal API endpoints
+- FluentValidation-driven request validation
+- application-layer orchestration in a dedicated use case service
+- domain entity creation
+- EF Core persistence through the repository abstraction
+- cache population and cache-aside reads
+- background job enqueueing through an application-facing abstraction
+- structured logging, correlation id propagation, and trace-friendly execution
+- consistent success, validation, and not-found handling
+
+How to use it as a starting point for new features:
+
+1. Start debugging from the `POST /api/reference-scenarios/greetings/execute` endpoint.
+2. Step into `ReferenceScenarioGreetingService` to follow validation, orchestration, domain creation, persistence, caching, and background dispatch.
+3. Use `GET /api/reference-scenarios/greetings/{id}` to inspect the read/query path and cache-aside retrieval behavior.
+4. Copy the vertical slice structure for future features rather than adding logic directly to `Program.cs` or the endpoint body.
 
 ## Local infrastructure
 
@@ -55,6 +75,7 @@ Sample background processing endpoints:
 
 - `POST /api/jobs/greetings/fire-and-forget`
 - `POST /api/jobs/greetings/scheduled`
+- `POST /api/reference-scenarios/greetings/execute`
 - Hangfire dashboard: `/hangfire`
 
 The Worker project also registers a recurring heartbeat job to demonstrate how future recurring jobs should be added without coupling them to the API host lifecycle.

@@ -12,7 +12,6 @@ public static class ApplicationBuilderExtensions
 {
     public static async Task<WebApplication> UseApiPipelineAsync(this WebApplication app)
     {
-        app.UseMiddleware<GlobalExceptionHandlingMiddleware>();
         app.UseMiddleware<CorrelationIdMiddleware>();
         app.UseMiddleware<RequestLoggingMiddleware>();
 

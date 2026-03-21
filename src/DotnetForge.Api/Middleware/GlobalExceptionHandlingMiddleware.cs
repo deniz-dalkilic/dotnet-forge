@@ -1,68 +1,51 @@
 using System.Diagnostics;
 using DotnetForge.Api.Exceptions;
 using DotnetForge.Api.Extensions;
+using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 
 namespace DotnetForge.Api.Middleware;
 
-public sealed class GlobalExceptionHandlingMiddleware
+public static class GlobalExceptionHandlingMiddleware
 {
-    private readonly RequestDelegate _next;
-    private readonly ILogger<GlobalExceptionHandlingMiddleware> _logger;
-    private readonly IHostEnvironment _environment;
-
-    public GlobalExceptionHandlingMiddleware(
-        RequestDelegate next,
-        ILogger<GlobalExceptionHandlingMiddleware> logger,
-        IHostEnvironment environment)
+    public static void ConfigureProblemDetails(ProblemDetailsContext context)
     {
-        _next = next;
-        _logger = logger;
-        _environment = environment;
-    }
-
-    public async Task Invoke(HttpContext context)
-    {
-        try
+        var exception = context.HttpContext.Features.Get<IExceptionHandlerFeature>()?.Error;
+        if (exception is null)
         {
-            await _next(context);
+            return;
         }
-        catch (Exception exception)
-        {
-            await WriteProblemDetailsResponse(context, exception);
-        }
-    }
 
-    private async Task WriteProblemDetailsResponse(HttpContext context, Exception exception)
-    {
         var (statusCode, title, type) = MapException(exception);
+        context.ProblemDetails.Status = statusCode;
+        context.ProblemDetails.Title = title;
+        context.ProblemDetails.Type = type;
+        context.ProblemDetails.Detail = GetDetail(context.HttpContext, exception, statusCode);
+        context.ProblemDetails.Instance = context.HttpContext.Request.Path;
+        context.ProblemDetails.Extensions["correlationId"] = context.HttpContext.GetCorrelationId();
+        context.ProblemDetails.Extensions["traceId"] = Activity.Current?.TraceId.ToString() ?? context.HttpContext.TraceIdentifier;
 
-        _logger.LogError(exception,
+        if (exception is ApiValidationException validationException)
+        {
+            context.ProblemDetails.Extensions["errors"] = validationException.Errors;
+        }
+    }
+
+    public static void LogUnhandledException(HttpContext context, ILogger logger)
+    {
+        var exception = context.Features.Get<IExceptionHandlerFeature>()?.Error;
+        if (exception is null)
+        {
+            return;
+        }
+
+        var (statusCode, _, _) = MapException(exception);
+        logger.LogError(
+            exception,
             "Unhandled exception mapped to HTTP {StatusCode}. CorrelationId: {CorrelationId}, TraceId: {TraceId}",
             statusCode,
             context.GetCorrelationId(),
             Activity.Current?.TraceId.ToString() ?? context.TraceIdentifier);
-
-        var problemDetails = new ProblemDetails
-        {
-            Type = type,
-            Title = title,
-            Status = statusCode,
-            Detail = ShouldIncludeExceptionDetail() ? exception.Message : GetSafeDetail(statusCode),
-            Instance = context.Request.Path
-        };
-
-        problemDetails.Extensions["correlationId"] = context.GetCorrelationId();
-        problemDetails.Extensions["traceId"] = Activity.Current?.TraceId.ToString() ?? context.TraceIdentifier;
-
-        if (exception is ApiValidationException validationException)
-        {
-            problemDetails.Extensions["errors"] = validationException.Errors;
-        }
-
-        context.Response.StatusCode = statusCode;
-        context.Response.ContentType = "application/problem+json";
-        await context.Response.WriteAsJsonAsync(problemDetails);
     }
 
     private static (int statusCode, string title, string type) MapException(Exception exception)
@@ -76,10 +59,16 @@ public sealed class GlobalExceptionHandlingMiddleware
             _ => (StatusCodes.Status500InternalServerError, "Unexpected server error", "https://datatracker.ietf.org/doc/html/rfc9457")
         };
 
-    private bool ShouldIncludeExceptionDetail() => _environment.IsDevelopment();
+    private static string GetDetail(HttpContext context, Exception exception, int statusCode)
+    {
+        var environment = context.RequestServices.GetRequiredService<IHostEnvironment>();
+        if (environment.IsDevelopment())
+        {
+            return exception.Message;
+        }
 
-    private static string GetSafeDetail(int statusCode)
-        => statusCode == StatusCodes.Status500InternalServerError
+        return statusCode == StatusCodes.Status500InternalServerError
             ? "An unexpected error occurred."
             : "Request could not be processed.";
+    }
 }

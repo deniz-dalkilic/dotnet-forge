@@ -1,8 +1,10 @@
 using DotnetForge.Application.Greetings;
+using DotnetForge.Application.ReferenceScenarios.Greetings;
 using DotnetForge.Infrastructure.Caching;
 using DotnetForge.Infrastructure.Greetings;
 using DotnetForge.Infrastructure.HealthChecks;
 using DotnetForge.Infrastructure.Options;
+using DotnetForge.Infrastructure.ReferenceScenarios;
 using DotnetForge.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -18,6 +20,7 @@ public static class DependencyInjection
         services.AddDatabase(configuration);
         services.AddForgeCaching(configuration);
         services.AddScoped<IGreetingRepository, GreetingRepository>();
+        services.AddScoped<IReferenceScenarioJobDispatcher, ReferenceScenarioJobDispatcher>();
 
         return services;
     }

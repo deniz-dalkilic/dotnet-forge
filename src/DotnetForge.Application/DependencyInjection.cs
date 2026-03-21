@@ -1,4 +1,5 @@
 using DotnetForge.Application.Greetings;
+using DotnetForge.Application.ReferenceScenarios.Greetings;
 using FluentValidation;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -10,6 +11,7 @@ public static class DependencyInjection
     {
         services.AddValidatorsFromAssemblyContaining<IApplicationAssemblyMarker>();
         services.AddScoped<IGreetingApplicationService, GreetingApplicationService>();
+        services.AddScoped<IReferenceScenarioGreetingService, ReferenceScenarioGreetingService>();
 
         return services;
     }

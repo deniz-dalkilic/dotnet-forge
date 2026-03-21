@@ -11,7 +11,6 @@ public static class ServiceCollectionExtensions
         services.AddApplication();
         services.AddInfrastructure(configuration);
         services.AddForgeHangfire(configuration, HangfireHostRole.Api);
-        services.AddProblemDetails();
         services.AddOpenApi();
         services.AddHealthChecks();
 
