@@ -1,10 +1,44 @@
 {
   "$schema": "http://json.schemastore.org/template",
   "author": "Deniz Dalkilic",
-  "classifications": ["Web", "API", "Clean Architecture"],
+  "classifications": [
+    "Web",
+    "API",
+    "Clean Architecture",
+    "Minimal API",
+    "PostgreSQL"
+  ],
   "identity": "DenizDalkilic.DotnetForge.CleanArchitecture",
   "name": ".NET Forge Clean Architecture Template",
+  "description": "Production-grade .NET 10 Clean Architecture starter with Minimal API, EF Core, PostgreSQL, Hangfire, Serilog, Seq, FluentValidation, Mapster-ready boundaries, and a reference scenario flow.",
   "shortName": "dnf-cleanapi",
   "sourceName": "DotnetForge",
-  "preferNameDirectory": true
+  "preferNameDirectory": true,
+  "tags": {
+    "language": "C#",
+    "type": "project"
+  },
+  "primaryOutputs": [
+    {
+      "path": "DotnetForge.sln"
+    }
+  ],
+  "sources": [
+    {
+      "modifiers": [
+        {
+          "exclude": [
+            ".git/**",
+            ".github/**",
+            ".idea/**",
+            ".vs/**",
+            "**/[Bb]in/**",
+            "**/[Oo]bj/**",
+            "**/*.user",
+            "**/*.suo"
+          ]
+        }
+      ]
+    }
+  ]
 }

@@ -1,4 +1,4 @@
-# dotnet-forge
+# DotnetForge
 
 A reusable .NET 10 starter focused on clean boundaries, minimal APIs, and production-friendly defaults.
 
@@ -47,6 +47,90 @@ How to use it as a starting point for new features:
 3. Use `GET /api/reference-scenarios/greetings/{id}` to inspect the read/query path and cache-aside retrieval behavior.
 4. Copy the vertical slice structure for future features rather than adding logic directly to `Program.cs` or the endpoint body.
 
+## Template packaging and local template testing
+
+The repository is prepared to be packaged later as a custom `dotnet new` template.
+
+### Template identity
+
+- `identity`: `DenizDalkilic.DotnetForge.CleanArchitecture`
+- `name`: `.NET Forge Clean Architecture Template`
+- `shortName`: `dnf-cleanapi`
+- `sourceName`: `DotnetForge`
+
+### How sourceName replacement works
+
+`sourceName` is `DotnetForge`, so running a command such as:
+
+```bash
+dotnet new dnf-cleanapi -n MyProject
+```
+
+replaces `DotnetForge` in solution names, project names, assembly names, namespaces, and file contents with `MyProject` where the template engine applies source-name replacement.
+
+This is why the repository intentionally keeps the internal source root consistent as `DotnetForge` instead of using a vague name such as `Template`.
+
+### Strings that must not be changed casually
+
+Do not casually change these values unless you are intentionally re-authoring the template package itself:
+
+- `.template.config/template.json`
+- template `identity`: `DenizDalkilic.DotnetForge.CleanArchitecture`
+- template `shortName`: `dnf-cleanapi`
+- template `sourceName`: `DotnetForge`
+- the baseline solution/project naming pattern rooted at `DotnetForge`
+
+Changing these carelessly can break rename behavior, reduce template discoverability, or leave generated projects with mixed names.
+
+### Install the template locally
+
+From the repository root:
+
+```bash
+dotnet new install .
+```
+
+If you need to reinstall after template changes:
+
+```bash
+dotnet new uninstall DenizDalkilic.DotnetForge.CleanArchitecture
+dotnet new install .
+```
+
+### Test the template locally
+
+Create a scratch directory outside this repository and run:
+
+```bash
+dotnet new dnf-cleanapi -n MyProject
+cd MyProject
+dotnet restore
+dotnet build
+dotnet test
+```
+
+Recommended checks after generation:
+
+- verify the solution file is renamed to `MyProject.sln`
+- verify project names and namespaces are rooted at `MyProject`
+- verify README, Docker Compose defaults, and application settings do not leave unnecessary `DotnetForge` leftovers
+
+### Pack it later as a NuGet template package
+
+A common next step is to create a dedicated packaging project or `.nuspec` that includes the repository content and `.template.config/template.json`, then produce a `.nupkg` template package.
+
+Typical flow:
+
+```bash
+dotnet pack
+```
+
+After packing, install the generated package locally for validation:
+
+```bash
+dotnet new install /path/to/Your.Template.Package.nupkg
+```
+
 ## Local infrastructure
 
 Start PostgreSQL and Seq for local development:
@@ -58,7 +142,7 @@ docker compose -f docker/docker-compose.yml -f docker/docker-compose.override.ym
 - PostgreSQL: `localhost:5432`
 - Seq ingestion: `http://localhost:5341`
 - Seq UI: `http://localhost:8081`
-- Seq first-run admin password: `dotnetforge`
+- Seq first-run admin password: `ChangeMe123!`
 
 The default development connection string and observability settings are configured in the host `appsettings.json` files.
 

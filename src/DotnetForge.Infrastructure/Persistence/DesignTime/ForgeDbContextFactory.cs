@@ -10,7 +10,7 @@ public sealed class ForgeDbContextFactory : IDesignTimeDbContextFactory<ForgeDbC
     {
         var connectionString =
             Environment.GetEnvironmentVariable("Database__ConnectionString") ??
-            "Host=localhost;Port=5432;Database=dotnetforge;Username=dotnetforge;Password=dotnetforge";
+            "Host=localhost;Port=5432;Database=appdb;Username=appuser;Password=apppassword";
 
         var optionsBuilder = new DbContextOptionsBuilder<ForgeDbContext>();
         optionsBuilder.UseNpgsql(connectionString, npgsql =>

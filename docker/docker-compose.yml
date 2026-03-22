@@ -3,32 +3,28 @@ name: dotnetforge-stack
 services:
     postgres:
         image: postgres:16
-        container_name: dotnetforge-postgres
         restart: unless-stopped
         environment:
-            POSTGRES_USER: dotnetforge
-            POSTGRES_PASSWORD: dotnetforge
-            POSTGRES_DB: dotnetforge
+            POSTGRES_USER: appuser
+            POSTGRES_PASSWORD: apppassword
+            POSTGRES_DB: appdb
         ports:
             - "5432:5432"
         healthcheck:
-            test: ["CMD-SHELL", "pg_isready -U dotnetforge -d dotnetforge"]
+            test: ["CMD-SHELL", "pg_isready -U appuser -d appdb"]
             interval: 10s
             timeout: 5s
             retries: 5
             start_period: 10s
         volumes:
             - postgres_data:/var/lib/postgresql/data
-        networks:
-            - dotnetforge-network
 
     seq:
         image: datalust/seq:2025.2
-        container_name: dotnetforge-seq
         restart: unless-stopped
         environment:
             ACCEPT_EULA: "Y"
-            SEQ_FIRSTRUN_ADMINPASSWORD: "dotnetforge"
+            SEQ_FIRSTRUN_ADMINPASSWORD: "ChangeMe123!"
         ports:
             - "5341:5341"
             - "8081:80"
@@ -40,13 +36,7 @@ services:
             start_period: 15s
         volumes:
             - seq_data:/data
-        networks:
-            - dotnetforge-network
 
 volumes:
     postgres_data:
     seq_data:
-
-networks:
-    dotnetforge-network:
-        driver: bridge
