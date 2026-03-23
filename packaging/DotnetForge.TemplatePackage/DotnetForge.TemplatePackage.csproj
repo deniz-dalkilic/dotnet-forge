@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <IsPackable>true</IsPackable>
+    <IncludeBuildOutput>false</IncludeBuildOutput>
+    <NoBuild>true</NoBuild>
+    <PackageType>Template</PackageType>
+    <PackageId>DenizDalkilic.DotnetForge.CleanArchitecture.Template</PackageId>
+    <PackageVersion>1.0.0</PackageVersion>
+    <Title>.NET Forge Clean Architecture Template</Title>
+    <Authors>Deniz Dalkilic</Authors>
+    <Description>Production-grade .NET 10 Clean Architecture starter template with Minimal API, EF Core, PostgreSQL, Hangfire, Serilog, Seq, HybridCache, and a reference scenario flow.</Description>
+    <PackageTags>dotnet-new;template;clean-architecture;minimal-api;postgresql;hangfire;serilog</PackageTags>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <RepositoryType>git</RepositoryType>
+    <RepositoryUrl>https://github.com/deniz-dalkilic/dotnet-forge</RepositoryUrl>
+    <SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>
+    <ContentTargetFolders>content</ContentTargetFolders>
+    <NoDefaultExcludes>true</NoDefaultExcludes>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Content Include="../../README.md" Pack="true" PackagePath="/" />
+    <Content Include="../../**/*"
+             Exclude="../../.git/**;../../.github/**;../../.idea/**;../../.vs/**;../../**/[Bb]in/**;../../**/[Oo]bj/**;../../**/*.nupkg;../../packaging/**"
+             Pack="true"
+             PackagePath="content" />
+  </ItemGroup>
+</Project>

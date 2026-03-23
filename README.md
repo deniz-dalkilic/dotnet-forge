@@ -49,7 +49,7 @@ How to use it as a starting point for new features:
 
 ## Template packaging and local template testing
 
-The repository is prepared to be packaged later as a custom `dotnet new` template.
+The repository now includes a dedicated template package project so the template can be installed either from the repository root or from a generated `.nupkg` package.
 
 ### Template identity
 
@@ -60,7 +60,7 @@ The repository is prepared to be packaged later as a custom `dotnet new` templat
 
 ### How sourceName replacement works
 
-`sourceName` is `DotnetForge`, so running a command such as:
+`sourceName` is `DotnetForge`, so after installing the template, running a command such as:
 
 ```bash
 dotnet new dnf-cleanapi -n MyProject
@@ -84,10 +84,13 @@ Changing these carelessly can break rename behavior, reduce template discoverabi
 
 ### Install the template locally
 
-From the repository root:
+You must install the template before `dotnet new dnf-cleanapi` will work. Running the short name command without installation will produce the exact “No templates or subcommands found matching” error that was reported in review.
+
+#### Option 1: install directly from the repository root
 
 ```bash
 dotnet new install .
+dotnet new list dnf-cleanapi
 ```
 
 If you need to reinstall after template changes:
@@ -95,11 +98,32 @@ If you need to reinstall after template changes:
 ```bash
 dotnet new uninstall DenizDalkilic.DotnetForge.CleanArchitecture
 dotnet new install .
+dotnet new list dnf-cleanapi
 ```
+
+#### Option 2: pack a distributable template package and install that
+
+```bash
+dotnet pack packaging/DotnetForge.TemplatePackage/DotnetForge.TemplatePackage.csproj -c Release
+dotnet new install packaging/DotnetForge.TemplatePackage/bin/Release/DenizDalkilic.DotnetForge.CleanArchitecture.Template.1.0.0.nupkg
+dotnet new list dnf-cleanapi
+```
+
+### Troubleshooting the exact error above
+
+If you see this:
+
+```text
+No templates or subcommands found matching: 'dnf-cleanapi'.
+```
+
+it means the template has **not been installed into your local template cache yet**. The fix is not to change the short name; the fix is to install the template first with one of the commands above, confirm it appears in `dotnet new list dnf-cleanapi`, and only then run `dotnet new dnf-cleanapi -n MyProject`.
+
+Running `dotnet new DotnetForge -n MyProject` will fail for the same reason because `DotnetForge` is the repository/source name, not an installed template short name.
 
 ### Test the template locally
 
-Create a scratch directory outside this repository and run:
+Create a scratch directory outside this repository only after one of the install flows above has completed successfully, then run:
 
 ```bash
 dotnet new dnf-cleanapi -n MyProject
@@ -115,20 +139,19 @@ Recommended checks after generation:
 - verify project names and namespaces are rooted at `MyProject`
 - verify README, Docker Compose defaults, and application settings do not leave unnecessary `DotnetForge` leftovers
 
-### Pack it later as a NuGet template package
+### Pack as a NuGet template package
 
-A common next step is to create a dedicated packaging project or `.nuspec` that includes the repository content and `.template.config/template.json`, then produce a `.nupkg` template package.
-
-Typical flow:
+The repository includes `packaging/DotnetForge.TemplatePackage/DotnetForge.TemplatePackage.csproj` for producing an installable template package. Use:
 
 ```bash
-dotnet pack
+dotnet pack packaging/DotnetForge.TemplatePackage/DotnetForge.TemplatePackage.csproj
 ```
 
 After packing, install the generated package locally for validation:
 
 ```bash
-dotnet new install /path/to/Your.Template.Package.nupkg
+dotnet new install packaging/DotnetForge.TemplatePackage/bin/Release/DenizDalkilic.DotnetForge.CleanArchitecture.Template.1.0.0.nupkg
+dotnet new list dnf-cleanapi
 ```
 
 ## Local infrastructure
