@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace DotnetForge.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(ForgeDbContext))]
-    [Migration("20260321144130_InitialPersistence")]
+    [Migration("20260322110555_InitialPersistence")]
     partial class InitialPersistence
     {
         /// <inheritdoc />

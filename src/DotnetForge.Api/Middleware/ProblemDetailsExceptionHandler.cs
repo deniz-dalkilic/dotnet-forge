@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace DotnetForge.Api.Middleware;
 
-public static class GlobalExceptionHandlingMiddleware
+public static class ProblemDetailsExceptionHandler
 {
     public static void ConfigureProblemDetails(ProblemDetailsContext context)
     {
@@ -31,7 +31,21 @@ public static class GlobalExceptionHandlingMiddleware
         }
     }
 
-    public static void LogUnhandledException(HttpContext context, ILogger logger)
+    public static int? ApplyExceptionResponse(HttpContext context)
+    {
+        var exception = context.Features.Get<IExceptionHandlerFeature>()?.Error;
+        if (exception is null)
+        {
+            return null;
+        }
+
+        var (statusCode, _, _) = MapException(exception);
+        context.Response.StatusCode = statusCode;
+
+        return statusCode;
+    }
+
+    public static void LogUnhandledException(HttpContext context, ILogger logger, int? statusCode = null)
     {
         var exception = context.Features.Get<IExceptionHandlerFeature>()?.Error;
         if (exception is null)
@@ -39,7 +53,7 @@ public static class GlobalExceptionHandlingMiddleware
             return;
         }
 
-        var (statusCode, _, _) = MapException(exception);
+        statusCode ??= MapException(exception).statusCode;
         logger.LogError(
             exception,
             "Unhandled exception mapped to HTTP {StatusCode}. CorrelationId: {CorrelationId}, TraceId: {TraceId}",
@@ -48,7 +62,7 @@ public static class GlobalExceptionHandlingMiddleware
             Activity.Current?.TraceId.ToString() ?? context.TraceIdentifier);
     }
 
-    private static (int statusCode, string title, string type) MapException(Exception exception)
+    public static (int statusCode, string title, string type) MapException(Exception exception)
         => exception switch
         {
             ApiValidationException => (StatusCodes.Status400BadRequest, "Validation failed", "https://datatracker.ietf.org/doc/html/rfc9457"),

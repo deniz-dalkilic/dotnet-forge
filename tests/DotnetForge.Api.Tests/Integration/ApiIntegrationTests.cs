@@ -104,6 +104,72 @@ public sealed class ApiIntegrationTests
     }
 
     [TestMethod]
+    public async Task ExecuteReferenceScenario_RoundTripsReferenceEntity_AndQueuesFollowUpJob()
+    {
+        const string correlationId = "reference-scenario-correlation-id";
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/reference-scenarios/greetings/execute")
+        {
+            Content = JsonContent.Create(new
+            {
+                name = "Reference User",
+                triggerSource = "integration-test"
+            })
+        };
+        request.Headers.Add("X-Correlation-ID", correlationId);
+
+        var createResponse = await _client!.SendAsync(request);
+        var createdPayload = await createResponse.Content.ReadFromJsonAsync<ReferenceScenarioGreetingContract>();
+        var readResponse = await _client.GetAsync($"/api/reference-scenarios/greetings/{createdPayload!.Id}");
+        var readPayload = await readResponse.Content.ReadFromJsonAsync<ReferenceScenarioGreetingDetailsContract>();
+
+        Assert.AreEqual(HttpStatusCode.Created, createResponse.StatusCode);
+        Assert.AreEqual($"/api/reference-scenarios/greetings/{createdPayload.Id}", createResponse.Headers.Location?.OriginalString);
+        Assert.AreEqual(correlationId, createdPayload.CorrelationId);
+        Assert.AreEqual("reference-scenario.greetings", createdPayload.Scenario);
+        Assert.AreEqual("integration-test", createdPayload.TriggerSource);
+        Assert.AreEqual(HttpStatusCode.OK, readResponse.StatusCode);
+        Assert.IsNotNull(readPayload);
+        Assert.AreEqual(createdPayload.Id, readPayload.Id);
+        Assert.AreEqual("cache-aside", readPayload.RetrievalPattern);
+        Assert.AreEqual(1, _factory!.Dispatcher.EnqueuedJobs.Count);
+        StringAssert.Contains(_factory.Dispatcher.EnqueuedJobs[0].Greeting, "Reference scenario follow-up");
+        Assert.AreEqual(correlationId, _factory.Dispatcher.EnqueuedJobs[0].CorrelationId);
+    }
+
+    [TestMethod]
+    public async Task ExecuteReferenceScenario_ReturnsValidationProblem_WhenRequestIsInvalid()
+    {
+        var response = await _client!.PostAsJsonAsync("/api/reference-scenarios/greetings/execute", new
+        {
+            name = string.Empty,
+            triggerSource = new string('x', 60)
+        });
+        var content = await response.Content.ReadAsStringAsync();
+
+        Assert.AreEqual(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.AreEqual("application/problem+json", response.Content.Headers.ContentType?.MediaType);
+
+        using var document = JsonDocument.Parse(content);
+        Assert.AreEqual("Validation failed", document.RootElement.GetProperty("title").GetString());
+        Assert.IsTrue(document.RootElement.TryGetProperty("errors", out var errors));
+        Assert.IsTrue(errors.TryGetProperty("Name", out _));
+        Assert.IsTrue(errors.TryGetProperty("TriggerSource", out _));
+    }
+
+    [TestMethod]
+    public async Task GetReferenceScenarioById_ReturnsNotFoundProblem_WhenEntityDoesNotExist()
+    {
+        var response = await _client!.GetAsync($"/api/reference-scenarios/greetings/{Guid.NewGuid()}");
+        var content = await response.Content.ReadAsStringAsync();
+
+        Assert.AreEqual(HttpStatusCode.NotFound, response.StatusCode);
+        Assert.AreEqual("application/problem+json", response.Content.Headers.ContentType?.MediaType);
+
+        using var document = JsonDocument.Parse(content);
+        Assert.AreEqual("reference_scenario.greeting.not_found", document.RootElement.GetProperty("errorCode").GetString());
+    }
+
+    [TestMethod]
     public async Task FireAndForgetJobEndpoint_QueuesJobAndReturnsAccepted()
     {
         const string correlationId = "integration-job-correlation-id";
@@ -216,6 +282,24 @@ public sealed class ApiIntegrationTests
     }
 
     private sealed record GreetingContract(Guid Id, string Name, string Message, DateTimeOffset CreatedAtUtc);
+
+    private sealed record ReferenceScenarioGreetingContract(
+        Guid Id,
+        string Name,
+        string Message,
+        DateTimeOffset CreatedAtUtc,
+        string BackgroundJobId,
+        string CorrelationId,
+        string Scenario,
+        string TriggerSource);
+
+    private sealed record ReferenceScenarioGreetingDetailsContract(
+        Guid Id,
+        string Name,
+        string Message,
+        DateTimeOffset CreatedAtUtc,
+        string Scenario,
+        string RetrievalPattern);
 
     private sealed class ForgeApiFactory : WebApplicationFactory<Program>
     {

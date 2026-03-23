@@ -1,6 +1,6 @@
-using System.Linq.Expressions;
 using DotnetForge.Infrastructure.BackgroundProcessing;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace DotnetForge.Infrastructure.Tests.BackgroundProcessing;
@@ -14,9 +14,8 @@ public sealed class HangfireRecurringJobRegistrarTests
         var enabledDefinition = new RecordingRecurringJobDefinition("enabled-job", isEnabled: true);
         var disabledDefinition = new RecordingRecurringJobDefinition("disabled-job", isEnabled: false);
         var scheduler = new RecordingRecurringJobScheduler();
-
         var registrar = new HangfireRecurringJobRegistrar(
-            new IRecurringJobDefinition[] { enabledDefinition, disabledDefinition },
+            [enabledDefinition, disabledDefinition],
             scheduler,
             Microsoft.Extensions.Options.Options.Create(new HangfireOptions()),
             NullLogger<HangfireRecurringJobRegistrar>.Instance);
@@ -34,9 +33,8 @@ public sealed class HangfireRecurringJobRegistrarTests
         var firstDefinition = new RecordingRecurringJobDefinition("first", isEnabled: true);
         var secondDefinition = new RecordingRecurringJobDefinition("second", isEnabled: true);
         var scheduler = new RecordingRecurringJobScheduler();
-
         var registrar = new HangfireRecurringJobRegistrar(
-            new IRecurringJobDefinition[] { firstDefinition, secondDefinition },
+            [firstDefinition, secondDefinition],
             scheduler,
             Microsoft.Extensions.Options.Options.Create(new HangfireOptions()),
             NullLogger<HangfireRecurringJobRegistrar>.Instance);
@@ -81,13 +79,12 @@ public sealed class HangfireRecurringJobRegistrarTests
         {
             BeforeRegister?.Invoke();
             RegisterCallCount++;
-
             scheduler.AddOrUpdate<object>(
                 RecurringJobId,
                 _ => NoOp(),
                 options.RecurringJobs.HeartbeatCron);
-        }
 
+        }
         private static void NoOp()
         {
         }
@@ -95,12 +92,9 @@ public sealed class HangfireRecurringJobRegistrarTests
 
     private sealed class RecordingRecurringJobScheduler : IRecurringJobScheduler
     {
-        public List<string> RegisteredJobIds { get; } = new();
+        public List<string> RegisteredJobIds { get; } = [];
 
-        public void AddOrUpdate<TJob>(
-            string recurringJobId,
-            Expression<Action<TJob>> methodCall,
-            string cronExpression)
+        public void AddOrUpdate<TJob>(string recurringJobId, System.Linq.Expressions.Expression<Action<TJob>> methodCall, string cronExpression)
             where TJob : class
         {
             RegisteredJobIds.Add(recurringJobId);

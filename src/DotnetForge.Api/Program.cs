@@ -1,13 +1,16 @@
 using DotnetForge.Api.Extensions;
 using DotnetForge.Api.Middleware;
 using DotnetForge.Infrastructure.Observability;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.AddForgeObservability("DotnetForge.Api", "1.0.0", includeAspNetCoreInstrumentation: true);
 builder.Services.AddProblemDetails(options =>
 {
-    options.CustomizeProblemDetails = GlobalExceptionHandlingMiddleware.ConfigureProblemDetails;
+    options.CustomizeProblemDetails = ProblemDetailsExceptionHandler.ConfigureProblemDetails;
 });
 builder.Services.AddApiServices(builder.Configuration);
 
@@ -20,7 +23,8 @@ app.UseExceptionHandler(exceptionHandlerApp =>
         var logger = context.RequestServices.GetRequiredService<ILoggerFactory>()
             .CreateLogger("DotnetForge.Api.ExceptionHandler");
 
-        GlobalExceptionHandlingMiddleware.LogUnhandledException(context, logger);
+        var statusCode = ProblemDetailsExceptionHandler.ApplyExceptionResponse(context);
+        ProblemDetailsExceptionHandler.LogUnhandledException(context, logger, statusCode);
 
         var problemDetailsService = context.RequestServices.GetRequiredService<Microsoft.AspNetCore.Http.IProblemDetailsService>();
         await problemDetailsService.WriteAsync(new Microsoft.AspNetCore.Http.ProblemDetailsContext

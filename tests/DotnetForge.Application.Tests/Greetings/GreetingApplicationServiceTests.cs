@@ -58,9 +58,10 @@ public sealed class GreetingApplicationServiceTests
     }
 
     [TestMethod]
-    public async Task GetGreetingByIdAsync_ReturnsGreeting_WhenGreetingExists()
+    public async Task GetGreetingByIdAsync_ReturnsGreeting_WhenGreetingExistsOutsideCache()
     {
         var created = await _service.CreateGreetingAsync(new GreetingRequest("Deniz"));
+        _cache.Clear();
 
         var result = await _service.GetGreetingByIdAsync(created.Value!.Id);
 
